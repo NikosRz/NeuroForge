@@ -1,0 +1,53 @@
+{
+  "defaultProfile": {
+    "name": "Alex",
+    "weeklyXpGoal": 600,
+    "staminaMax": 100,
+    "overnightRecovery": 30,
+    "restDays": [0, 6]
+  },
+  "staminaCosts": {
+    "micro_step": 5,
+    "focus_turn": 15,
+    "quest_clear": 20
+  },
+  "xpAwards": {
+    "micro_step": 15,
+    "focus_turn": 25,
+    "quest_clear_base": 50
+  },
+  "levelBaseXp": 150,
+  "levelGrowthFactor": 1.35,
+  "bossTaunts": [
+    "HaHa! I'm waiting for you!",
+    "Too scared to split me?",
+    "I'm unbreakable!",
+    "Still staring at the backlog?",
+    "One micro-step won't hurt me!",
+    "Your laser tickles!",
+    "Focus timer? Never heard of it.",
+    "I've been 'In Progress' for weeks!",
+    "Try breaking me down first!",
+    "Is that your best shot, unit?",
+    "My armor is pure scope creep!",
+    "You call that a sprint?",
+    "Better grab the Energy Core!",
+    "I thrive on context switching!",
+    "Check my subtasks if you dare!",
+    "No meetings can save you now!",
+    "Just 5 minutes? Please!",
+    "I'm the blocker of your dreams!",
+    "Press [B] if you want to flee!",
+    "Your stamina is looking shaky!",
+    "One step at a time? Too slow!",
+    "I'm guarded by legacy code!",
+    "Hit me with a 15m Battle Turn!",
+    "You won't ship me today!",
+    "Wait until you see my edge cases!",
+    "Is your Ollama even running?",
+    "Pin another quest, I dare you!",
+    "I'm worth 150 XP if you can beat me!",
+    "Zero guilt? We'll see about that!",
+    "Ready for a real boss fight?"
+  ]
+}
