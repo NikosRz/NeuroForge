@@ -6,10 +6,19 @@ interface WindowWithWebkitAudio extends Window {
   webkitAudioContext?: typeof AudioContext;
 }
 
+interface ActiveChargeNodes {
+  oscMain: OscillatorNode;
+  oscHarm: OscillatorNode;
+  lfo: OscillatorNode;
+  lfoDepth: GainNode;
+  gain: GainNode;
+}
+
 class ArcadeAudioEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private noiseBuffer: AudioBuffer | null = null;
+  private chargeNodes: ActiveChargeNodes | null = null;
   private muted = false;
 
   private ensureContext(): AudioContext | null {
@@ -50,6 +59,9 @@ class ArcadeAudioEngine {
 
   public setMuted(muted: boolean): void {
     this.muted = muted;
+    if (muted) {
+      this.stopGunCharge();
+    }
     if (this.masterGain && this.ctx) {
       this.masterGain.gain.setValueAtTime(muted ? 0 : 0.28, this.ctx.currentTime);
     }
@@ -125,6 +137,77 @@ class ArcadeAudioEngine {
   public playLaser(): void {
     this.playTone(980, 210, 0.11, 'square', 0.34);
     this.playTone(1480, 420, 0.06, 'sawtooth', 0.16);
+  }
+
+  /** Starts a rising 16-bit plasma-blaster charge sound; stops cleanly via stopGunCharge(). */
+  public startGunCharge(durationSec = 2.75): void {
+    if (this.muted || this.chargeNodes) return;
+    const ctx = this.ensureContext();
+    if (!ctx || !this.masterGain) return;
+
+    const now = ctx.currentTime;
+    const dur = Math.max(0.2, durationSec);
+
+    const oscMain = ctx.createOscillator();
+    oscMain.type = 'sawtooth';
+    oscMain.frequency.setValueAtTime(140, now);
+    oscMain.frequency.exponentialRampToValueAtTime(920, now + dur);
+
+    const oscHarm = ctx.createOscillator();
+    oscHarm.type = 'square';
+    oscHarm.frequency.setValueAtTime(280, now);
+    oscHarm.frequency.exponentialRampToValueAtTime(1380, now + dur);
+
+    const lfo = ctx.createOscillator();
+    lfo.type = 'triangle';
+    lfo.frequency.setValueAtTime(12, now);
+    lfo.frequency.exponentialRampToValueAtTime(28, now + dur);
+
+    const lfoDepth = ctx.createGain();
+    lfoDepth.gain.setValueAtTime(0.05, now);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.04, now);
+    gain.gain.linearRampToValueAtTime(0.22, now + dur);
+
+    const harmGain = ctx.createGain();
+    harmGain.gain.setValueAtTime(0.45, now);
+
+    lfo.connect(lfoDepth);
+    lfoDepth.connect(gain.gain);
+
+    oscMain.connect(gain);
+    oscHarm.connect(harmGain);
+    harmGain.connect(gain);
+    gain.connect(this.masterGain);
+
+    oscMain.start(now);
+    oscHarm.start(now);
+    lfo.start(now);
+
+    this.chargeNodes = { oscMain, oscHarm, lfo, lfoDepth, gain };
+  }
+
+  /** Stops the active gun charge sound with a short click-free fade-out. */
+  public stopGunCharge(): void {
+    const active = this.chargeNodes;
+    if (!active) return;
+    this.chargeNodes = null;
+
+    const ctx = this.ctx;
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    try {
+      active.gain.gain.cancelScheduledValues(now);
+      active.gain.gain.setValueAtTime(Math.max(0.001, active.gain.gain.value), now);
+      active.gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+      active.oscMain.stop(now + 0.05);
+      active.oscHarm.stop(now + 0.05);
+      active.lfo.stop(now + 0.05);
+    } catch {
+      // Oscillators may already be stopped.
+    }
   }
 
   public playEnemyHit(): void {

@@ -800,6 +800,7 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
         keysRef.current.down = false;
       } else if (key === ' ') {
         const hold = spaceHoldRef.current;
+        arcadeAudio.stopGunCharge();
         if (hold.active && !hold.firedCharged && activeModalRef.current === null) {
           shootLaser(false);
         }
@@ -812,6 +813,7 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
       keysRef.current = { left: false, right: false, up: false, down: false };
       spaceHoldRef.current = { active: false, elapsed: 0, firedCharged: false };
       heroRef.current.chargeProgress = 0;
+      arcadeAudio.stopGunCharge();
     };
 
     window.addEventListener('keydown', onKeyDown);
@@ -878,6 +880,7 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
       if (hold.active && !hold.firedCharged && activeModalRef.current === null) {
         hold.elapsed += dt;
         if (hold.elapsed >= CHARGE_START_DELAY_S && gameStateRef.current.activeQuest) {
+          arcadeAudio.startGunCharge(CHARGE_FULL_DURATION_S - CHARGE_START_DELAY_S);
           heroRef.current.chargeProgress = Math.min(
             1,
             (hold.elapsed - CHARGE_START_DELAY_S) /
@@ -887,11 +890,13 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
         if (hold.elapsed >= CHARGE_FULL_DURATION_S) {
           hold.firedCharged = true;
           heroRef.current.chargeProgress = 0;
+          arcadeAudio.stopGunCharge();
           shootLaser(true);
           void triggerChargedAiSplit();
         }
       } else {
         heroRef.current.chargeProgress = 0;
+        arcadeAudio.stopGunCharge();
       }
 
       if (hitstopTimerRef.current > 0) {
@@ -999,7 +1004,10 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
     };
 
     rafId = window.requestAnimationFrame(render);
-    return () => window.cancelAnimationFrame(rafId);
+    return () => {
+      arcadeAudio.stopGunCharge();
+      window.cancelAnimationFrame(rafId);
+    };
   }, [handleLaserHitBoss, shootLaser, triggerChargedAiSplit]);
 
   const hud = toHudSnapshot(gameState);
