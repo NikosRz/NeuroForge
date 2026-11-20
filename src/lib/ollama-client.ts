@@ -575,6 +575,83 @@ export const splitQuestWithOllama = async (
   return { steps };
 };
 
+const normalizeEstimateBucket = (raw: unknown): 0 | 5 | 15 | 30 => {
+  if (typeof raw !== 'number' || !Number.isFinite(raw) || raw <= 0) return 0;
+  if (raw <= 5) return 5;
+  if (raw <= 15) return 15;
+  return 30;
+};
+
+/**
+ * Uses local AI to assign a time bucket (5, 15, or 30 minutes) to each Mind-Dump note.
+ * Notes that are vague or uncertain are assigned 0 minutes.
+ */
+export const estimateMindDumpTimesWithOllama = async (
+  cfg: AiConfigRow,
+  notes: StickyNoteRow[]
+): Promise<{
+  estimates: Array<{ noteId: number; minutes: 0 | 5 | 15 | 30 }>;
+  error?: string;
+}> => {
+  if (notes.length === 0) {
+    return { estimates: [], error: 'Your Mind-Dump is empty! Capture a thought first.' };
+  }
+
+  const batch = notes.slice(0, 40);
+  const noteLines = batch.map((n) => `[id=${n.id}] ${n.content}`).join('\n');
+
+  const prompt = [
+    'Assign an estimated duration in minutes to each task below using ONLY one of: 5, 15, 30, or 0.',
+    '- 5: quick task taking ~5 minutes or less',
+    '- 15: short task taking ~6 to 15 minutes',
+    '- 30: longer task taking ~16 to 30+ minutes',
+    '- 0: unsure, too vague, or not an actionable task',
+    'Return an estimate for every noteId listed.',
+    'Tasks:',
+    noteLines,
+  ].join('\n');
+
+  const schema = {
+    type: 'object',
+    properties: {
+      estimates: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            noteId: { type: 'integer' },
+            minutes: { type: 'integer', enum: [0, 5, 15, 30] },
+          },
+          required: ['noteId', 'minutes'],
+        },
+      },
+    },
+    required: ['estimates'],
+  };
+
+  const res = await callOllamaJson<{ estimates?: unknown }>(cfg, prompt, schema);
+  if (res.error) return { estimates: [], error: res.error };
+
+  const validIds = new Set(batch.map((n) => n.id));
+  const byId = new Map<number, 0 | 5 | 15 | 30>();
+  const rawList = Array.isArray(res.data?.estimates) ? res.data.estimates : [];
+
+  for (const item of rawList) {
+    if (!item || typeof item !== 'object') continue;
+    const record = item as { noteId?: unknown; minutes?: unknown };
+    if (typeof record.noteId !== 'number' || !validIds.has(record.noteId)) continue;
+    byId.set(record.noteId, normalizeEstimateBucket(record.minutes));
+  }
+
+  // Leave any note omitted by the model at 0 minutes
+  const estimates = batch.map((n) => ({
+    noteId: n.id,
+    minutes: byId.get(n.id) ?? 0,
+  }));
+
+  return { estimates };
+};
+
 /** Matches a saved Mind-Dump sticky note to an available 5/15/30-minute time window. */
 export const pickQuickTaskWithOllama = async (
   cfg: AiConfigRow,

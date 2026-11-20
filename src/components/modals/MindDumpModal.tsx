@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Eye, EyeOff, Plus, Search, Trash2, Zap } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Plus, Search, Sparkles, Trash2, Zap } from 'lucide-react';
 import {
   addNoteAction,
   deleteNoteAction,
+  estimateMindDumpTimesAction,
   getNotesAction,
   pickQuickTaskAction,
+  type QuickTaskLookupResult,
 } from '@/app/actions/mind-dump';
 import { arcadeAudio } from '@/lib/arcadeAudio';
 import type { StickyNoteRow } from '@/lib/types';
@@ -18,24 +20,58 @@ interface MindDumpModalProps {
 
 const SEARCH_DEBOUNCE_MS = 300;
 
+const formatEstimateBadge = (estMinutes: number | null): { label: string; className: string } => {
+  const mins = estMinutes ?? 0;
+  if (mins <= 0) {
+    return {
+      label: '0m',
+      className: 'bg-slate-800 border-slate-600 text-slate-400',
+    };
+  }
+  if (mins <= 5) {
+    return {
+      label: `${mins}m`,
+      className: 'bg-emerald-950/70 border-emerald-500/70 text-emerald-300',
+    };
+  }
+  if (mins <= 15) {
+    return {
+      label: `${mins}m`,
+      className: 'bg-cyan-950/70 border-cyan-500/70 text-cyan-300',
+    };
+  }
+  return {
+    label: `${mins}m`,
+    className: 'bg-amber-950/70 border-amber-500/70 text-amber-300',
+  };
+};
+
 export const MindDumpModal: React.FC<MindDumpModalProps> = ({ onClose }) => {
   const [thought, setThought] = useState<string>('');
   const [showNotes, setShowNotes] = useState<boolean>(false);
   const [search, setSearch] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [notes, setNotes] = useState<StickyNoteRow[]>([]);
-  const [quickMatch, setQuickMatch] = useState<{
-    text: string;
-    reason?: string;
-    minutes: number;
-  } | null>(null);
-  const [aiLoading, setAiLoading] = useState<boolean>(false);
+  const [quickResult, setQuickResult] = useState<QuickTaskLookupResult | null>(null);
+  const [estimating, setEstimating] = useState<boolean>(false);
+  const [lookingUp, setLookingUp] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [savedNotice, setSavedNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const requestIdRef = useRef<number>(0);
   const noticeTimerRef = useRef<number | null>(null);
+
+  const showTempNotice = (msg: string, durationMs = 2500): void => {
+    setNotice(msg);
+    if (noticeTimerRef.current !== null) {
+      window.clearTimeout(noticeTimerRef.current);
+    }
+    noticeTimerRef.current = window.setTimeout(() => {
+      setNotice(null);
+      noticeTimerRef.current = null;
+    }, durationMs);
+  };
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -82,14 +118,7 @@ export const MindDumpModal: React.FC<MindDumpModalProps> = ({ onClose }) => {
     arcadeAudio.playCoinChime();
     setNotes((prev) => [savedNote, ...prev]);
     setThought('');
-    setSavedNotice('Captured!');
-    if (noticeTimerRef.current !== null) {
-      window.clearTimeout(noticeTimerRef.current);
-    }
-    noticeTimerRef.current = window.setTimeout(() => {
-      setSavedNotice(null);
-      noticeTimerRef.current = null;
-    }, 1500);
+    showTempNotice('Captured!', 1500);
   };
 
   const handleDelete = async (id: number): Promise<void> => {
@@ -99,20 +128,46 @@ export const MindDumpModal: React.FC<MindDumpModalProps> = ({ onClose }) => {
       return;
     }
     setNotes((prev) => prev.filter((n) => n.id !== id));
+    setQuickResult((prev) => {
+      if (!prev) return null;
+      const remaining = prev.notes.filter((n) => n.id !== id);
+      return remaining.length > 0 ? { ...prev, notes: remaining } : null;
+    });
+  };
+
+  const handleEstimateTimes = async (): Promise<void> => {
+    setEstimating(true);
+    setError(null);
+    const res = await estimateMindDumpTimesAction();
+    setEstimating(false);
+    if (res.error) {
+      setError(res.error);
+      return;
+    }
+    arcadeAudio.playCoinChime();
+    setNotes(res.notes);
+    setQuickResult(null);
+    showTempNotice(
+      res.estimatedCount > 0
+        ? `Assigned time estimates to ${res.estimatedCount} note(s).`
+        : 'Ollama could not estimate any new notes (left at 0m).',
+      3500
+    );
   };
 
   const handleQuickTask = async (minutes: 5 | 15 | 30): Promise<void> => {
-    setAiLoading(true);
+    setLookingUp(true);
     setError(null);
-    setQuickMatch(null);
     const res = await pickQuickTaskAction(minutes);
-    setAiLoading(false);
-    if (res.error || !res.text) {
-      setError(res.error ?? 'No matching quick task found.');
+    setLookingUp(false);
+    if (res.error) {
+      setError(res.error);
       return;
     }
-    arcadeAudio.playStationActivate();
-    setQuickMatch({ text: res.text, reason: res.reason, minutes });
+    if (res.notes.length > 0) {
+      arcadeAudio.playStationActivate();
+    }
+    setQuickResult(res);
   };
 
   return (
@@ -147,44 +202,103 @@ export const MindDumpModal: React.FC<MindDumpModalProps> = ({ onClose }) => {
         </button>
       </form>
 
-      {savedNotice && <p className="font-pixel text-xs text-emerald-300">{savedNotice}</p>}
+      {notice && <p className="font-pixel text-xs text-emerald-300">{notice}</p>}
 
-      {/* Quick Task Picker (Local AI) */}
+      {/* Time Picker & AI Time Estimation */}
       <div className="bg-[#0B1221] border border-slate-700 p-3 space-y-2.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="inline-flex items-center gap-1.5 font-pixel text-xs text-yellow-300">
             <Zap className="w-4 h-4" />
-            <span>GET QUICK TASK (LOCAL AI)</span>
+            <span>GET QUICK TASK</span>
           </span>
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-xs text-slate-400 mr-1">I have:</span>
             {([5, 15, 30] as const).map((m) => (
               <button
                 key={m}
                 type="button"
-                disabled={aiLoading}
+                disabled={lookingUp || estimating}
                 onClick={() => void handleQuickTask(m)}
                 className="px-2.5 py-1 bg-slate-800 hover:bg-yellow-500/20 border border-slate-600 hover:border-yellow-400 font-pixel text-xs text-yellow-300 cursor-pointer disabled:opacity-50"
               >
                 {m}m
               </button>
             ))}
+            <button
+              type="button"
+              disabled={estimating || notes.length === 0}
+              onClick={() => void handleEstimateTimes()}
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-cyan-900/50 hover:bg-cyan-800/60 border border-cyan-400/80 font-pixel text-[11px] text-cyan-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ml-1"
+              title="Use Ollama to assign 5m, 15m, 30m, or 0m to your notes"
+            >
+              {estimating ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Estimating...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Estimate Times</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
 
-        {aiLoading && (
-          <p className="font-pixel text-xs text-cyan-300">MATCHING A TASK WITH OLLAMA...</p>
+        {estimating && (
+          <p className="font-pixel text-xs text-cyan-300">
+            ASSIGNING TIME ESTIMATES WITH OLLAMA...
+          </p>
         )}
 
-        {quickMatch && (
-          <div className="bg-emerald-950/40 border border-emerald-500/60 p-2.5 space-y-1">
+        {quickResult && quickResult.mode === 'match' && quickResult.notes[0] && (
+          <div className="bg-emerald-950/40 border border-emerald-500/60 p-2.5 flex items-center justify-between gap-2">
             <p className="text-sm font-semibold text-emerald-200">
-              [{quickMatch.minutes}m] {quickMatch.text}
+              [{quickResult.minutes}m] {quickResult.notes[0].content}
             </p>
-            {quickMatch.reason && (
-              <p className="text-xs text-emerald-300/80">{quickMatch.reason}</p>
-            )}
+            <button
+              type="button"
+              onClick={() => void handleDelete(quickResult.notes[0].id)}
+              className="text-emerald-300/70 hover:text-rose-400 p-1 cursor-pointer shrink-0"
+              aria-label="Delete note"
+              title="Remove note"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
           </div>
+        )}
+
+        {quickResult && quickResult.mode === 'unestimated' && (
+          <div className="bg-amber-950/35 border border-amber-500/50 p-2.5 space-y-2">
+            <p className="text-xs text-amber-200">
+              No {quickResult.minutes}m tasks found — showing unestimated (0m) notes:
+            </p>
+            <ul className="space-y-1 max-h-36 overflow-y-auto pr-1">
+              {quickResult.notes.map((n) => (
+                <li
+                  key={n.id}
+                  className="flex items-center justify-between gap-2 bg-slate-900/70 border border-slate-700 px-2.5 py-1.5 text-xs"
+                >
+                  <span className="text-slate-100">[0m] {n.content}</span>
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete(n.id)}
+                    className="text-slate-500 hover:text-rose-400 p-0.5 cursor-pointer shrink-0"
+                    aria-label="Delete note"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {quickResult && quickResult.mode === 'empty' && (
+          <p className="text-xs text-slate-400 italic">
+            No {quickResult.minutes}m or unestimated (0m) notes found.
+          </p>
         )}
       </div>
 
@@ -217,22 +331,32 @@ export const MindDumpModal: React.FC<MindDumpModalProps> = ({ onClose }) => {
             <p className="text-xs text-slate-400 italic">No captured thoughts yet.</p>
           ) : (
             <ul className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-              {notes.map((n) => (
-                <li
-                  key={n.id}
-                  className="flex items-center justify-between gap-2 bg-[#1E293B] border border-slate-700 px-3 py-2 text-sm"
-                >
-                  <span className="text-slate-100">{n.content}</span>
-                  <button
-                    type="button"
-                    onClick={() => void handleDelete(n.id)}
-                    className="text-slate-500 hover:text-rose-400 p-1 cursor-pointer shrink-0"
-                    aria-label="Delete note"
+              {notes.map((n) => {
+                const badge = formatEstimateBadge(n.est_minutes);
+                return (
+                  <li
+                    key={n.id}
+                    className="flex items-center justify-between gap-2 bg-[#1E293B] border border-slate-700 px-3 py-2 text-sm"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </li>
-              ))}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span
+                        className={`font-pixel text-[10px] px-1.5 py-0.5 border shrink-0 ${badge.className}`}
+                      >
+                        {badge.label}
+                      </span>
+                      <span className="text-slate-100 break-words">{n.content}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void handleDelete(n.id)}
+                      className="text-slate-500 hover:text-rose-400 p-1 cursor-pointer shrink-0"
+                      aria-label="Delete note"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
