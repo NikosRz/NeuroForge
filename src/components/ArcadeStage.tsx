@@ -55,6 +55,12 @@ const toHudSnapshot = (state: HydratedState): HudSnapshot => ({
   fatigued: state.stats.fatigued,
 });
 
+const hasPendingSplitSteps = (state: HydratedState): boolean => {
+  const key = state.activeQuest?.key;
+  if (!key) return false;
+  return state.microSteps.some((step) => step.jira_issue_key === key && step.done === 0);
+};
+
 interface ArcadeStageProps {
   initialState: HydratedState;
 }
@@ -446,7 +452,7 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
         `+${res.steps.length} MICRO-STEPS!`,
         '#22D3EE'
       );
-      showToast(`AI split ${activeQuest.key} into ${res.steps.length} micro-steps!`);
+      showToast(`AI split ${activeQuest.key} into ${res.steps.length} micro-steps — shoot Boss to open Quest!`);
       await refreshState();
     } finally {
       aiSplittingRef.current = false;
@@ -460,11 +466,14 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
 
       const hero = heroRef.current;
       const activeQuest = gameStateRef.current.activeQuest;
+      const openQuestOnHit = !charged && hasPendingSplitSteps(gameStateRef.current);
       let skipStatusCheck = false;
 
       // Fix #1: 1st shot on a pinned quest opens JIRA in a new tab after a 500ms shot delay
+      // (skipped when the quest is already split with pending micro-steps, since shooting opens QuestModal)
       if (
         !charged &&
+        !openQuestOnHit &&
         activeQuest?.url &&
         !engagedQuestKeysRef.current.has(activeQuest.key)
       ) {
@@ -553,6 +562,30 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
           'spark',
           60
         );
+        return;
+      }
+
+      if (!aiSplittingRef.current && hasPendingSplitSteps(gameStateRef.current)) {
+        arcadeAudio.playStationActivate();
+        boss.hitFlashTimer = 0.14;
+        boss.shakeTimer = 0.16;
+        spawnParticlesInto(
+          particlesRef.current,
+          bolt.x,
+          bolt.y,
+          16,
+          ['#22D3EE', '#FEF08A', '#FFFFFF'],
+          70,
+          240,
+          240,
+          3,
+          6,
+          0.18,
+          0.42,
+          'spark',
+          50
+        );
+        setActiveModal('quest');
         return;
       }
 
@@ -880,6 +913,26 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
         lasersRef.current = stepOut.nextLasers;
         particlesRef.current = stepOut.nextParticles;
         floatingTextsRef.current = stepOut.nextTexts;
+
+        // Emit flying electric sparks off the robot while local AI is splitting the quest
+        if (aiSplittingRef.current && !bossRef.current.defeated && Math.random() < dt * 28) {
+          spawnParticlesInto(
+            particlesRef.current,
+            bossRef.current.x + (Math.random() - 0.5) * 92,
+            bossRef.current.y - 24 - Math.random() * 124,
+            2,
+            ['#22D3EE', '#67E8F9', '#FEF08A', '#FFFFFF'],
+            60,
+            210,
+            180,
+            3,
+            5,
+            0.12,
+            0.32,
+            'spark',
+            40
+          );
+        }
       }
 
       const canvas = canvasRef.current;

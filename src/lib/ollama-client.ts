@@ -1,4 +1,8 @@
-import { execFile, spawn } from 'node:child_process';
+import { execFile, spawn, type ChildProcess } from 'node:child_process';
+import { constants as fsConstants } from 'node:fs';
+import { access } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { normalizeError } from './errors';
 import { DEFAULT_OLLAMA_MODEL } from './shared';
@@ -8,23 +12,134 @@ const execFileAsync = promisify(execFile);
 const DEFAULT_OLLAMA_URL = 'http://127.0.0.1:11434';
 const STATUS_TIMEOUT_MS = 2_500;
 const GENERATE_TIMEOUT_MS = 30_000;
+const INSTALL_TIMEOUT_MS = 5 * 60_000;
 const PULL_TIMEOUT_MS = 10 * 60_000;
+
+export interface OllamaInstallEvent {
+  status: string;
+  progress: number;
+  detail?: string;
+  done?: boolean;
+  error?: string;
+}
 
 /** Tracks the PID if NeuroForge itself spawned `ollama serve` in this process. */
 let managedPid: number | null = null;
 
+/** Prevents concurrent Ollama installations from spawning overlapping Homebrew/curl processes. */
+let activeInstallChild: ChildProcess | null = null;
+
 const normalizeOllamaUrl = (raw?: string): string =>
   (raw?.trim() || DEFAULT_OLLAMA_URL).replace(/\/+$/, '');
 
-/** Checks whether the `ollama` CLI binary is available on PATH. */
-const checkBinaryInstalled = async (): Promise<boolean> => {
-  const cmd = process.platform === 'win32' ? 'where' : 'which';
+const isExecutableFile = async (filePath: string): Promise<boolean> => {
   try {
-    await execFileAsync(cmd, ['ollama'], { timeout: 3_000 });
+    await access(filePath, fsConstants.X_OK);
     return true;
   } catch {
     return false;
   }
+};
+
+/** Resolves the `ollama` binary from PATH or the macOS Ollama.app bundle. */
+const resolveOllamaBinary = async (): Promise<string | null> => {
+  const cmd = process.platform === 'win32' ? 'where' : 'which';
+  try {
+    await execFileAsync(cmd, ['ollama'], { timeout: 3_000 });
+    return 'ollama';
+  } catch {
+    // Fall through to macOS app bundle check.
+  }
+
+  if (process.platform === 'darwin') {
+    const candidates = [
+      '/Applications/Ollama.app/Contents/Resources/ollama',
+      join(homedir(), 'Applications', 'Ollama.app', 'Contents', 'Resources', 'ollama'),
+    ];
+    for (const candidate of candidates) {
+      if (await isExecutableFile(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
+  return null;
+};
+
+/** Checks whether the `ollama` CLI binary (or macOS Ollama.app bundle) is installed. */
+const checkBinaryInstalled = async (): Promise<boolean> =>
+  (await resolveOllamaBinary()) !== null;
+
+const checkCommandAvailable = async (command: string): Promise<boolean> => {
+  const lookup = process.platform === 'win32' ? 'where' : 'which';
+  try {
+    await execFileAsync(lookup, [command], { timeout: 3_000 });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const stripAnsi = (raw: string): string =>
+  raw.replace(/\u001B\[[0-9;?]*[ -/]*[@-~]/g, '').trim();
+
+const killProcessGroup = (child: ChildProcess): void => {
+  const pid = child.pid;
+  if (!pid) return;
+  try {
+    if (process.platform !== 'win32') {
+      process.kill(-pid, 'SIGTERM');
+    } else {
+      child.kill('SIGTERM');
+    }
+  } catch {
+    try {
+      child.kill('SIGTERM');
+    } catch {
+      // Process already exited.
+    }
+  }
+};
+
+const parseInstallProgress = (
+  line: string,
+  currentProgress: number,
+  currentStatus: string
+): { progress: number; status: string } => {
+  const lower = line.toLowerCase();
+  let progress = currentProgress;
+  let status = currentStatus;
+
+  if (lower.includes('downloading')) {
+    status = 'Downloading Ollama...';
+    progress = Math.max(progress, 15);
+  } else if (lower.includes('verifying') || lower.includes('checksum') || lower.includes('sha')) {
+    status = 'Verifying download...';
+    progress = Math.max(progress, 78);
+  } else if (
+    lower.includes('installing cask') ||
+    lower.includes('moving app') ||
+    lower.includes('linking binary') ||
+    lower.includes('installing ollama')
+  ) {
+    status = 'Installing Ollama...';
+    progress = Math.max(progress, 88);
+  } else if (lower.includes('was successfully installed') || lower.includes('install complete')) {
+    status = 'Finalizing installation...';
+    progress = Math.max(progress, 96);
+  }
+
+  const pctMatch = line.match(/(\d{1,3}(?:\.\d+)?)%/);
+  if (pctMatch) {
+    const pct = Number.parseFloat(pctMatch[1]);
+    if (Number.isFinite(pct) && pct >= 0 && pct <= 100 && currentProgress < 78) {
+      const mapped = Math.round(15 + pct * 0.6);
+      progress = Math.max(progress, mapped);
+      status = `Downloading Ollama (${Math.round(pct)}%)...`;
+    }
+  }
+
+  return { progress, status };
 };
 
 /**
@@ -76,35 +191,162 @@ export const getOllamaStatus = async (
   }
 };
 
-/** Installs Ollama using the OS-appropriate package manager (macOS Homebrew or Linux script). */
-export const installOllama = async (): Promise<{ ok: boolean; message: string }> => {
+/**
+ * Streams installation progress for Ollama using the prebuilt macOS cask
+ * (`brew install --cask ollama`) or the official Linux install script.
+ * Kills the entire child process group on cancellation or timeout.
+ */
+export const installOllamaStream = async (
+  onEvent: (evt: OllamaInstallEvent) => void,
+  signal?: AbortSignal
+): Promise<{ ok: boolean; message: string }> => {
   if (await checkBinaryInstalled()) {
-    return { ok: true, message: 'Ollama is already installed.' };
+    const message = 'Ollama is already installed.';
+    onEvent({ status: message, progress: 100, done: true });
+    return { ok: true, message };
   }
 
-  try {
-    if (process.platform === 'darwin') {
-      await execFileAsync('brew', ['install', 'ollama'], { timeout: 120_000 });
-      return { ok: true, message: 'Ollama installed via Homebrew.' };
-    }
+  if (activeInstallChild) {
+    return { ok: false, message: 'An Ollama installation is already in progress.' };
+  }
 
-    if (process.platform === 'linux') {
-      await execFileAsync(
-        'sh',
-        ['-c', 'curl -fsSL https://ollama.com/install.sh | sh'],
-        { timeout: 120_000 }
-      );
-      return { ok: true, message: 'Ollama installed via official install script.' };
-    }
+  let command: string;
+  let args: string[];
+  let env: NodeJS.ProcessEnv = { ...process.env };
+  let initialStatus: string;
 
+  if (process.platform === 'darwin') {
+    if (!(await checkCommandAvailable('brew'))) {
+      return {
+        ok: false,
+        message: 'Homebrew was not found. Download Ollama directly from https://ollama.com/download.',
+      };
+    }
+    command = 'brew';
+    args = ['install', '--cask', 'ollama'];
+    env = {
+      ...process.env,
+      HOMEBREW_NO_AUTO_UPDATE: '1',
+      HOMEBREW_NO_ENV_HINTS: '1',
+    };
+    initialStatus = 'Starting Homebrew cask install (prebuilt Ollama.app)...';
+  } else if (process.platform === 'linux') {
+    command = 'sh';
+    args = ['-c', 'curl -fsSL https://ollama.com/install.sh | sh'];
+    initialStatus = 'Running official Ollama Linux installer...';
+  } else {
     return {
       ok: false,
-      message: 'Automatic install is supported on macOS and Linux. On Windows, install from ollama.com.',
+      message: 'Automatic install is supported on macOS and Linux. On Windows, download from https://ollama.com/download.',
     };
-  } catch (err) {
-    return { ok: false, message: normalizeError(err, 'Could not install Ollama') };
   }
+
+  let progress = 5;
+  let status = initialStatus;
+  let lastDetail = '';
+  let lastErrorLine = '';
+
+  onEvent({ status, progress });
+
+  return await new Promise<{ ok: boolean; message: string }>((resolve) => {
+    let settled = false;
+    let timedOut = false;
+
+    const child = spawn(command, args, {
+      detached: process.platform !== 'win32',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env,
+    });
+    activeInstallChild = child;
+
+    const finish = (result: { ok: boolean; message: string }) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      signal?.removeEventListener('abort', handleAbort);
+      if (activeInstallChild === child) {
+        activeInstallChild = null;
+      }
+      resolve(result);
+    };
+
+    const handleAbort = () => {
+      killProcessGroup(child);
+      finish({ ok: false, message: 'Installation cancelled.' });
+    };
+
+    if (signal?.aborted) {
+      handleAbort();
+      return;
+    }
+    signal?.addEventListener('abort', handleAbort, { once: true });
+
+    const timeoutId = setTimeout(() => {
+      timedOut = true;
+      killProcessGroup(child);
+      finish({
+        ok: false,
+        message: 'Ollama installation timed out. You can also download it directly from https://ollama.com/download.',
+      });
+    }, INSTALL_TIMEOUT_MS);
+
+    const handleChunk = (chunk: Buffer, isStderr: boolean) => {
+      const text = chunk.toString('utf8');
+      const lines = text.split(/[\r\n]+/);
+      for (const rawLine of lines) {
+        const cleaned = stripAnsi(rawLine);
+        if (!cleaned) continue;
+        lastDetail = cleaned;
+        if (isStderr && /error|failed|fatal|denied/i.test(cleaned)) {
+          lastErrorLine = cleaned;
+        }
+        const next = parseInstallProgress(cleaned, progress, status);
+        progress = next.progress;
+        status = next.status;
+        onEvent({ status, progress, detail: cleaned });
+      }
+    };
+
+    child.stdout?.on('data', (chunk: Buffer) => handleChunk(chunk, false));
+    child.stderr?.on('data', (chunk: Buffer) => handleChunk(chunk, true));
+
+    child.on('error', (err) => {
+      finish({ ok: false, message: normalizeError(err, 'Could not start Ollama installer.') });
+    });
+
+    child.on('close', async (code) => {
+      if (settled || timedOut) return;
+      if (code === 0) {
+        const installed = await checkBinaryInstalled();
+        if (!installed) {
+          finish({
+            ok: false,
+            message:
+              'Installer exited cleanly, but Ollama was not detected on PATH or in /Applications/Ollama.app.',
+          });
+          return;
+        }
+        const successMsg =
+          process.platform === 'darwin'
+            ? 'Ollama.app installed! Click Start to launch the local server.'
+            : 'Ollama installed! Click Start to launch the local server.';
+        onEvent({ status: successMsg, progress: 100, detail: lastDetail || undefined, done: true });
+        finish({ ok: true, message: successMsg });
+        return;
+      }
+
+      const fallbackDetail = lastErrorLine || lastDetail;
+      const errMsg = fallbackDetail
+        ? `Ollama install failed (exit ${code ?? 'unknown'}): ${fallbackDetail}`
+        : `Ollama install failed with exit code ${code ?? 'unknown'}.`;
+      finish({ ok: false, message: errMsg });
+    });
+  });
 };
+
+/** Installs Ollama using the OS-appropriate installer (non-streaming wrapper). */
+export const installOllama = async (): Promise<{ ok: boolean; message: string }> =>
+  installOllamaStream(() => {});
 
 /** Spawns `ollama serve` in the background and polls `/api/tags` until ready. */
 export const startOllamaServer = async (
@@ -114,12 +356,13 @@ export const startOllamaServer = async (
   if (current.status === 'ready') {
     return { ok: true, message: 'Ollama is already running.' };
   }
-  if (current.status === 'not_installed') {
+  const binary = await resolveOllamaBinary();
+  if (!binary) {
     return { ok: false, message: 'Ollama is not installed.' };
   }
 
   try {
-    const child = spawn('ollama', ['serve'], {
+    const child = spawn(binary, ['serve'], {
       detached: true,
       stdio: 'ignore',
     });

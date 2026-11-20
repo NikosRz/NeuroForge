@@ -2,6 +2,89 @@ import { inkBox, inkPoly, pxRect, wrapCanvasText } from './primitives';
 import type { BossState } from './types';
 import { BOSS_TAUNTS, CANVAS_WIDTH } from './world';
 
+const shockRand = (seed: number): number => {
+  const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+const drawLightningBolt = (
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  segments: number,
+  spread: number,
+  seed: number,
+  coreColor = '#FFFFFF'
+): void => {
+  const points: Array<[number, number]> = [[x1, y1]];
+  for (let i = 1; i < segments; i += 1) {
+    const t = i / segments;
+    const jitterX = (shockRand(seed + i * 7.3) - 0.5) * 2 * spread;
+    const jitterY = (shockRand(seed + i * 13.1) - 0.5) * 2 * (spread * 0.45);
+    points.push([
+      Math.round(x1 + (x2 - x1) * t + jitterX),
+      Math.round(y1 + (y2 - y1) * t + jitterY),
+    ]);
+  }
+  points.push([x2, y2]);
+
+  ctx.lineJoin = 'miter';
+  ctx.lineCap = 'square';
+
+  // Outer electric cyan glow
+  ctx.beginPath();
+  ctx.moveTo(points[0][0], points[0][1]);
+  for (let i = 1; i < points.length; i += 1) {
+    ctx.lineTo(points[i][0], points[i][1]);
+  }
+  ctx.strokeStyle = '#22D3EE';
+  ctx.lineWidth = 4.5;
+  ctx.stroke();
+
+  // Inner bright core
+  ctx.beginPath();
+  ctx.moveTo(points[0][0], points[0][1]);
+  for (let i = 1; i < points.length; i += 1) {
+    ctx.lineTo(points[i][0], points[i][1]);
+  }
+  ctx.strokeStyle = coreColor;
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
+};
+
+const drawElectricShock = (ctx: CanvasRenderingContext2D, time: number): void => {
+  const tick = Math.floor(time * 16);
+  const pulse = 0.16 + Math.abs(Math.sin(time * 22)) * 0.16;
+
+  ctx.save();
+
+  // Pulsing electric aura around the robot
+  ctx.fillStyle = `rgba(34, 211, 238, ${pulse.toFixed(3)})`;
+  ctx.beginPath();
+  ctx.ellipse(0, -82, 66, 82, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Jagged lightning arcs crackling across the mecha chassis
+  drawLightningBolt(ctx, -18, -168, 6, -118, 5, 11, tick * 3 + 1, '#FEF08A');
+  drawLightningBolt(ctx, -56, -124, 48, -68, 6, 13, tick * 5 + 17, '#FFFFFF');
+  drawLightningBolt(ctx, 52, -132, -40, -28, 6, 14, tick * 7 + 31, '#ECFEFF');
+  drawLightningBolt(ctx, -38, -54, 42, -14, 5, 10, tick * 11 + 43, '#FEF08A');
+
+  // Crackling pixel sparks popping around the body
+  const sparkColors = ['#FFFFFF', '#FEF08A', '#67E8F9', '#22D3EE'];
+  for (let i = 0; i < 8; i += 1) {
+    const sx = Math.round((shockRand(tick * 13 + i * 19) - 0.5) * 124);
+    const sy = Math.round(-12 - shockRand(tick * 17 + i * 23) * 144);
+    const size = shockRand(tick * 29 + i * 31) > 0.5 ? 4 : 3;
+    const color = sparkColors[i % sparkColors.length];
+    pxRect(ctx, sx, sy, size, size, color);
+  }
+
+  ctx.restore();
+};
+
 const drawSpeechBubble = (
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -126,8 +209,10 @@ export const drawBoss = (
   // Heavy Articulated Red/Orange Mecha Boss (~158px tall)
   const idleY = Math.round(Math.sin(time * 2.8) * 1.8);
   const breathY = Math.round(Math.sin(time * 2.8 + 0.5) * 1.5);
-  const shakeX =
+  const hitShakeX =
     boss.shakeTimer > 0 ? Math.round(Math.sin(boss.shakeTimer * 90) * 6) : 0;
+  const shockShakeX = aiSplitting ? Math.round(Math.sin(time * 78) * 3.5) : 0;
+  const shakeX = hitShakeX + shockShakeX;
 
   ctx.save();
   ctx.translate(Math.round(boss.x + shakeX), Math.round(boss.y));
@@ -141,8 +226,9 @@ export const drawBoss = (
   ctx.fillStyle = 'rgba(0, 0, 0, 0.48)';
   ctx.fillRect(-52, -3, 104, 7);
 
-  const flash = boss.hitFlashTimer > 0;
-  const outline = flash ? '#FEF08A' : '#060A14';
+  const shockFlash = aiSplitting && Math.floor(time * 18) % 4 === 0;
+  const flash = boss.hitFlashTimer > 0 || shockFlash;
+  const outline = shockFlash ? '#22D3EE' : flash ? '#FEF08A' : '#060A14';
   const redDeep = flash ? '#FFFFFF' : '#7F1D1D';
   const redDark = flash ? '#FFFFFF' : '#991B1B';
   const redMid = flash ? '#FFFFFF' : '#DC2626';
@@ -578,6 +664,11 @@ export const drawBoss = (
     ctx.ellipse(-4, -82, 68, 80, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+  }
+
+  // Electric shock lightning effect while local AI is splitting the quest
+  if (aiSplitting) {
+    drawElectricShock(ctx, time);
   }
 
   ctx.restore();
