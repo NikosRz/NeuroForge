@@ -1,16 +1,7 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ExternalLink,
-  Pause,
-  Play,
-  Plus,
-  RotateCcw,
-  Sparkles,
-  Swords,
-  Trash2,
-} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ExternalLink, Plus, Sparkles, Trash2 } from 'lucide-react';
 import {
   addMicroStepAction,
   deleteMicroStepAction,
@@ -18,7 +9,6 @@ import {
   splitQuestAction,
   toggleMicroStepAction,
 } from '@/app/actions/jira';
-import { completeFocusTurnAction } from '@/app/actions/rpg';
 import { arcadeAudio } from '@/lib/arcadeAudio';
 import type { MicroStepRow } from '@/lib/types';
 import { ArcadeModalShell } from './ArcadeModalShell';
@@ -51,12 +41,6 @@ export const QuestModal: React.FC<QuestModalProps> = ({
   const [splitting, setSplitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Focus Timer ("Battle Turn")
-  const [durationMins, setDurationMins] = useState<15 | 25>(15);
-  const [secondsLeft, setSecondsLeft] = useState<number>(15 * 60);
-  const [timerRunning, setTimerRunning] = useState<boolean>(false);
-  const finishingTurnRef = useRef<boolean>(false);
-
   useEffect(() => {
     setSteps(initialMicroSteps);
   }, [initialMicroSteps]);
@@ -74,62 +58,6 @@ export const QuestModal: React.FC<QuestModalProps> = ({
       active = false;
     };
   }, [activeQuest.key]);
-
-  const handleFinishFocusTurn = useCallback(async () => {
-    setTimerRunning(false);
-    const res = await completeFocusTurnAction({ jiraIssueKey: activeQuest.key });
-    if (res.error) {
-      setError(res.error);
-      return;
-    }
-    if (res.data && res.data.awardedXp > 0) {
-      arcadeAudio.playCoinChime();
-      onXpCelebration(
-        res.data.awardedXp,
-        `+${res.data.awardedXp} XP BATTLE TURN!`,
-        res.data.leveledUp,
-        res.data.newLevel
-      );
-    }
-    await onRefresh();
-  }, [activeQuest.key, onRefresh, onXpCelebration]);
-
-  // Pure interval countdown (StrictMode-safe: no side effects inside state updater)
-  useEffect(() => {
-    if (!timerRunning) return;
-    const id = window.setInterval(() => {
-      setSecondsLeft((prev) => Math.max(0, prev - 1));
-    }, 1000);
-    return () => window.clearInterval(id);
-  }, [timerRunning]);
-
-  // Dedicated completion effect guarded by ref so it fires at most once per completed turn
-  useEffect(() => {
-    if (timerRunning && secondsLeft === 0 && !finishingTurnRef.current) {
-      finishingTurnRef.current = true;
-      void handleFinishFocusTurn();
-    }
-  }, [handleFinishFocusTurn, secondsLeft, timerRunning]);
-
-  const handleSelectDuration = (mins: 15 | 25): void => {
-    finishingTurnRef.current = false;
-    setTimerRunning(false);
-    setDurationMins(mins);
-    setSecondsLeft(mins * 60);
-  };
-
-  const handleToggleTimer = (): void => {
-    if (!timerRunning && secondsLeft === 0) {
-      finishingTurnRef.current = false;
-      setSecondsLeft(durationMins * 60);
-      setTimerRunning(true);
-      return;
-    }
-    if (!timerRunning) {
-      finishingTurnRef.current = false;
-    }
-    setTimerRunning((r) => !r);
-  };
 
   const handleAddStep = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
@@ -196,11 +124,6 @@ export const QuestModal: React.FC<QuestModalProps> = ({
     await onRefresh();
   };
 
-  const totalSec = durationMins * 60;
-  const timerPct = Math.round((secondsLeft / totalSec) * 100);
-  const minsText = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
-  const secsText = String(secondsLeft % 60).padStart(2, '0');
-
   return (
     <ArcadeModalShell
       title={`QUEST: ${activeQuest.key}`}
@@ -236,60 +159,6 @@ export const QuestModal: React.FC<QuestModalProps> = ({
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
         )}
-      </div>
-
-      {/* Focus Timer ("Battle Turn") */}
-      <div className="bg-[#0B1221] border border-slate-700 p-3 space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Swords className="w-4 h-4 text-yellow-400" />
-            <span className="font-pixel text-xs text-yellow-300">BATTLE TURN (+25 XP)</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            {([15, 25] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => handleSelectDuration(m)}
-                className={`px-2 py-0.5 font-pixel text-[11px] border cursor-pointer ${
-                  durationMins === m
-                    ? 'bg-yellow-500/20 border-yellow-400 text-yellow-300'
-                    : 'bg-slate-900 border-slate-700 text-slate-400'
-                }`}
-              >
-                {m}m
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="font-mono-code text-lg font-bold text-white w-16 tabular-nums">
-            {minsText}:{secsText}
-          </div>
-          <div className="flex-1 h-3 bg-slate-900 border border-slate-700 overflow-hidden">
-            <div
-              className="h-full bg-yellow-400 transition-[width] duration-300"
-              style={{ width: `${timerPct}%` }}
-            />
-          </div>
-          <button
-            type="button"
-            onClick={handleToggleTimer}
-            className="p-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 cursor-pointer"
-            title={timerRunning ? 'Pause' : 'Start Battle Turn'}
-          >
-            {timerRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSelectDuration(durationMins)}
-            className="p-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 cursor-pointer"
-            title="Reset Timer"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
-        </div>
       </div>
 
       {/* Subtasks or Local Micro-Steps */}
