@@ -1,7 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { checkBossCompletionAction, splitQuestAction } from '@/app/actions/jira';
+import {
+  checkBossCompletionAction,
+  splitQuestAction,
+  toggleMicroStepAction,
+} from '@/app/actions/jira';
 import { getCalendarEventsAction } from '@/app/actions/roadmap-calendar';
 import { saveSettingsAction, triggerBoostAction } from '@/app/actions/rpg';
 import {
@@ -15,20 +19,24 @@ import {
   drawBoss,
   drawEffects,
   drawHero,
+  drawMicroBot,
   drawPlatformsAndAcid,
   drawRobotPortrait,
   drawStations,
+  type BossMicroProgress,
+  type BossPhase,
   type BossState,
   type FloatingText,
   type HeroState,
   type InteractTargetId,
   type LaserBolt,
   type LevelUpBanner,
+  type MicroBotState,
   type Particle,
   type StationId,
 } from '@/lib/arcade';
 import { arcadeAudio } from '@/lib/arcadeAudio';
-import type { CalendarEvent, HydratedState } from '@/lib/types';
+import type { CalendarEvent, HydratedState, MicroStepRow } from '@/lib/types';
 import { ArcadeHud, type HudSnapshot } from './arcade/ArcadeHud';
 import { ArcadeModals, type ModalKind } from './arcade/ArcadeModals';
 import {
@@ -55,10 +63,52 @@ const toHudSnapshot = (state: HydratedState): HudSnapshot => ({
   fatigued: state.stats.fatigued,
 });
 
-const hasPendingSplitSteps = (state: HydratedState): boolean => {
+interface DerivedBossCombat {
+  phase: BossPhase;
+  activeStep: MicroStepRow | null;
+  pendingCount: number;
+  microProgress: BossMicroProgress | null;
+}
+
+const deriveBossCombatState = (state: HydratedState): DerivedBossCombat => {
   const key = state.activeQuest?.key;
-  if (!key) return false;
-  return state.microSteps.some((step) => step.jira_issue_key === key && step.done === 0);
+  if (!key) {
+    return { phase: 'normal', activeStep: null, pendingCount: 0, microProgress: null };
+  }
+
+  const questSteps = state.microSteps
+    .filter((step) => step.jira_issue_key === key)
+    .slice()
+    .sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
+
+  if (questSteps.length === 0) {
+    return { phase: 'normal', activeStep: null, pendingCount: 0, microProgress: null };
+  }
+
+  const pendingSteps = questSteps.filter((step) => step.done === 0);
+  const doneCount = questSteps.length - pendingSteps.length;
+  const microProgress: BossMicroProgress = {
+    total: questSteps.length,
+    done: doneCount,
+    remaining: pendingSteps.length,
+    currentIndex: Math.min(questSteps.length, doneCount + 1),
+  };
+
+  if (pendingSteps.length > 0) {
+    return {
+      phase: 'micro-wave',
+      activeStep: pendingSteps[0],
+      pendingCount: pendingSteps.length,
+      microProgress,
+    };
+  }
+
+  return {
+    phase: 'exposed-core',
+    activeStep: null,
+    pendingCount: 0,
+    microProgress,
+  };
 };
 
 interface ArcadeStageProps {
@@ -85,6 +135,7 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
 
   const engagedQuestKeysRef = useRef<Set<string>>(new Set());
   const bossCheckInFlightRef = useRef<boolean>(false);
+  const microKillInFlightRef = useRef<boolean>(false);
   const spaceHoldRef = useRef<{ active: boolean; elapsed: number; firedCharged: boolean }>({
     active: false,
     elapsed: 0,
@@ -125,6 +176,20 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
     hitY: 416,
     hitW: 132,
     hitH: 158,
+  });
+
+  const microBotRef = useRef<MicroBotState>({
+    activeStepId: null,
+    x: 1126,
+    y: 574,
+    spawnTimer: 0,
+    graceTimer: 0,
+    hitFlashTimer: 0,
+    shakeTimer: 0,
+    hitX: 1084,
+    hitY: 492,
+    hitW: 84,
+    hitH: 82,
   });
 
   const keysRef = useRef<KeyState>({ left: false, right: false, up: false, down: false });
@@ -178,15 +243,30 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
     setMuted(gameState.profile.muted);
     arcadeAudio.setMuted(gameState.profile.muted);
 
+    const combat = deriveBossCombatState(gameState);
+
     // Sync Boss HP bar with completed vs total micro-steps
-    if (gameState.activeQuest && gameState.microSteps.length > 0) {
-      const doneCount = gameState.microSteps.filter((s) => s.done === 1).length;
-      const pct = Math.round(
-        ((gameState.microSteps.length - doneCount) / gameState.microSteps.length) * 100
-      );
+    if (combat.microProgress && combat.microProgress.total > 0) {
+      const pct = Math.round((combat.microProgress.remaining / combat.microProgress.total) * 100);
       bossRef.current.hp = Math.max(5, pct);
     } else {
       bossRef.current.hp = 100;
+    }
+
+    // Sync active tiny micro-robot (walk in from right edge + 0.85s grace shield when advancing)
+    const bot = microBotRef.current;
+    if (combat.activeStep) {
+      if (bot.activeStepId !== combat.activeStep.id) {
+        bot.activeStepId = combat.activeStep.id;
+        bot.spawnTimer = 0.7;
+        bot.graceTimer = 0.85;
+        bot.hitFlashTimer = 0;
+        bot.shakeTimer = 0;
+      }
+    } else {
+      bot.activeStepId = null;
+      bot.spawnTimer = 0;
+      bot.graceTimer = 0;
     }
   }, [gameState]);
 
@@ -432,6 +512,10 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
       showToast('Pin a JIRA quest first [B] to use Charged AI Split!');
       return;
     }
+    if (deriveBossCombatState(gameStateRef.current).phase === 'micro-wave') {
+      showToast('Clear remaining micro-bots first, or click the nameplate to edit steps!');
+      return;
+    }
     if (aiSplittingRef.current) return;
 
     aiSplittingRef.current = true;
@@ -445,14 +529,38 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
         showToast(res.error, 5500);
         return;
       }
-      arcadeAudio.playCoinChime();
+
+      // Big Boss explodes into tiny micro-robots!
+      const boss = bossRef.current;
+      hitstopTimerRef.current = 0.05;
+      timersRef.current.shakeTimer = 0.36;
+      timersRef.current.shakeMagnitude = 9;
+      arcadeAudio.playBossDefeat();
+      spawnParticlesInto(
+        particlesRef.current,
+        boss.x,
+        boss.y - 72,
+        44,
+        ['#22D3EE', '#67E8F9', '#EF4444', '#F97316', '#FACC15', '#FFFFFF'],
+        90,
+        420,
+        460,
+        4,
+        10,
+        0.4,
+        0.95,
+        'explosion',
+        110
+      );
       spawnFloatingText(
-        bossRef.current.x,
-        bossRef.current.y - 135,
-        `+${res.steps.length} MICRO-STEPS!`,
+        boss.x,
+        boss.y - 135,
+        `SPLIT INTO ${res.steps.length} BOTS!`,
         '#22D3EE'
       );
-      showToast(`AI split ${activeQuest.key} into ${res.steps.length} micro-steps — shoot Boss to open Quest!`);
+      showToast(
+        `AI split ${activeQuest.key} into ${res.steps.length} micro-bots — shoot each bot when done!`
+      );
       await refreshState();
     } finally {
       aiSplittingRef.current = false;
@@ -466,21 +574,25 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
 
       const hero = heroRef.current;
       const activeQuest = gameStateRef.current.activeQuest;
-      const openQuestOnHit = !charged && hasPendingSplitSteps(gameStateRef.current);
+      const combat = deriveBossCombatState(gameStateRef.current);
       let skipStatusCheck = false;
 
       // Fix #1: 1st shot on a pinned quest opens JIRA in a new tab after a 500ms shot delay
-      // (skipped when the quest is already split with pending micro-steps, since shooting opens QuestModal)
+      // (skipped during active micro-bot wave, since shooting destroys the current micro-bot)
       if (
         !charged &&
-        !openQuestOnHit &&
+        combat.phase !== 'micro-wave' &&
         activeQuest?.url &&
         !engagedQuestKeysRef.current.has(activeQuest.key)
       ) {
         const targetUrl = activeQuest.url;
         engagedQuestKeysRef.current.add(activeQuest.key);
         skipStatusCheck = true;
-        showToast(`Opening ${activeQuest.key} in JIRA — shoot Boss again once completed!`);
+        showToast(
+          combat.phase === 'exposed-core'
+            ? `Opening ${activeQuest.key} in JIRA — close it there, then shoot Boss for the final blow!`
+            : `Opening ${activeQuest.key} in JIRA — shoot Boss again once completed!`
+        );
         if (openTabTimerRef.current !== null) {
           window.clearTimeout(openTabTimerRef.current);
         }
@@ -536,11 +648,154 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
     [showToast]
   );
 
+  // Micro-robot hit handler: 1 shot completes the active micro-step & advances to the next bot
+  const handleLaserHitMicroBot = useCallback(
+    (bolt: LaserBolt): void => {
+      const bot = microBotRef.current;
+      if (bolt.charged) {
+        bot.hitFlashTimer = 0.14;
+        bot.shakeTimer = 0.2;
+        arcadeAudio.playEnemyHit();
+        spawnParticlesInto(
+          particlesRef.current,
+          bolt.x,
+          bolt.y,
+          16,
+          ['#22D3EE', '#67E8F9', '#FACC15', '#FFFFFF'],
+          70,
+          240,
+          240,
+          3,
+          6,
+          0.18,
+          0.45,
+          'spark',
+          40
+        );
+        return;
+      }
+
+      // Grace shield deflects accidental double-tap shots right after a tiny robot drops in
+      if (bot.graceTimer > 0 || microKillInFlightRef.current) {
+        arcadeAudio.playUiClick();
+        spawnParticlesInto(
+          particlesRef.current,
+          bolt.x,
+          bolt.y,
+          10,
+          ['#22D3EE', '#A5F3FC', '#FFFFFF'],
+          60,
+          190,
+          220,
+          3,
+          5,
+          0.14,
+          0.32,
+          'spark',
+          35
+        );
+        return;
+      }
+
+      const state = gameStateRef.current;
+      const activeQuest = state.activeQuest;
+      const combat = deriveBossCombatState(state);
+      const activeStep = combat.activeStep;
+      if (!activeQuest || !activeStep) return;
+
+      microKillInFlightRef.current = true;
+      hitstopTimerRef.current = 0.04;
+      timersRef.current.shakeTimer = 0.18;
+      timersRef.current.shakeMagnitude = 5;
+      bot.hitFlashTimer = 0.14;
+      bot.shakeTimer = 0.18;
+
+      arcadeAudio.playEnemyHit();
+      spawnParticlesInto(
+        particlesRef.current,
+        bot.x,
+        bot.y - 36,
+        28,
+        ['#EF4444', '#F97316', '#FACC15', '#22D3EE', '#FFFFFF'],
+        70,
+        320,
+        420,
+        4,
+        8,
+        0.3,
+        0.75,
+        'explosion',
+        85
+      );
+
+      const isFinalBot = combat.pendingCount === 1;
+      const questKey = activeQuest.key;
+
+      void (async () => {
+        try {
+          const res = await toggleMicroStepAction({ id: activeStep.id, done: true });
+          if (res.error) {
+            showToast(res.error);
+            return;
+          }
+
+          if (res.xpResult && !res.xpResult.duplicate && res.xpResult.awardedXp > 0) {
+            arcadeAudio.playCoinChime();
+            spawnFloatingText(
+              bot.x,
+              bot.y - 96,
+              `+${res.xpResult.awardedXp} XP!`,
+              '#FACC15'
+            );
+            if (res.xpResult.leveledUp) {
+              triggerLevelUpBanner(res.xpResult.newLevel);
+            }
+          }
+
+          if (isFinalBot) {
+            spawnParticlesInto(
+              particlesRef.current,
+              bossRef.current.x,
+              bossRef.current.y - 84,
+              24,
+              ['#FACC15', '#FEF08A', '#22D3EE', '#FFFFFF'],
+              80,
+              300,
+              360,
+              4,
+              8,
+              0.4,
+              0.9,
+              'coin',
+              130
+            );
+            spawnFloatingText(
+              bossRef.current.x,
+              bossRef.current.y - 142,
+              'ALL STEPS CLEARED!',
+              '#22D3EE'
+            );
+            showToast(
+              `All micro-steps cleared! Open ${questKey} in JIRA to close it, then shoot Boss!`,
+              4500
+            );
+          }
+
+          await refreshState();
+        } finally {
+          microKillInFlightRef.current = false;
+        }
+      })();
+    },
+    [refreshState, showToast, spawnFloatingText, triggerLevelUpBanner]
+  );
+
   // Fix #1: Boss hit handler — zero client XP/HP drain; queries real JIRA status on engaged quests
   const handleLaserHitBoss = useCallback(
     (bolt: LaserBolt): void => {
       const boss = bossRef.current;
       const activeQuest = gameStateRef.current.activeQuest;
+      const combat = deriveBossCombatState(gameStateRef.current);
 
       if (bolt.charged) {
         arcadeAudio.playEnemyHit();
@@ -562,30 +817,6 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
           'spark',
           60
         );
-        return;
-      }
-
-      if (!aiSplittingRef.current && hasPendingSplitSteps(gameStateRef.current)) {
-        arcadeAudio.playStationActivate();
-        boss.hitFlashTimer = 0.14;
-        boss.shakeTimer = 0.16;
-        spawnParticlesInto(
-          particlesRef.current,
-          bolt.x,
-          bolt.y,
-          16,
-          ['#22D3EE', '#FEF08A', '#FFFFFF'],
-          70,
-          240,
-          240,
-          3,
-          6,
-          0.18,
-          0.42,
-          'spark',
-          50
-        );
-        setActiveModal('quest');
         return;
       }
 
@@ -669,9 +900,11 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
 
           arcadeAudio.playUiClick();
           boss.shieldFlashTimer = 0.55;
-          boss.overrideTaunt = res.currentStatus
-            ? `HaHa, you need to finish the task first! (${res.currentStatus})`
-            : 'HaHa, you need to finish the task first!';
+          const prefix =
+            combat.phase === 'exposed-core'
+              ? `Close ${activeQuest.key} in JIRA first!`
+              : 'HaHa, you need to finish the task first!';
+          boss.overrideTaunt = res.currentStatus ? `${prefix} (${res.currentStatus})` : prefix;
           boss.overrideTauntTimer = 3.8;
         } finally {
           bossCheckInFlightRef.current = false;
@@ -835,7 +1068,8 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>): void => {
     const pt = getCanvasPoint(canvasRef.current, e.clientX, e.clientY);
     if (!pt) return;
-    const hit = hitTestTarget(pt.x, pt.y, bossRef.current);
+    const combat = deriveBossCombatState(gameStateRef.current);
+    const hit = hitTestTarget(pt.x, pt.y, bossRef.current, combat.phase, microBotRef.current);
     hoveredTargetRef.current = hit;
     setCursorPointer(hit !== null);
   };
@@ -851,10 +1085,11 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
     const pt = getCanvasPoint(canvasRef.current, e.clientX, e.clientY);
     if (!pt) return;
 
-    const hit = hitTestTarget(pt.x, pt.y, bossRef.current);
+    const combat = deriveBossCombatState(gameStateRef.current);
+    const hit = hitTestTarget(pt.x, pt.y, bossRef.current, combat.phase, microBotRef.current);
     if (!hit) return;
 
-    if (hit === 'boss') {
+    if (hit === 'boss' || hit === 'boss-plate') {
       arcadeAudio.playStationActivate();
       setActiveModal(gameStateRef.current.activeQuest ? 'quest' : 'quest-board');
       return;
@@ -899,6 +1134,8 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
         arcadeAudio.stopGunCharge();
       }
 
+      const combat = deriveBossCombatState(gameStateRef.current);
+
       if (hitstopTimerRef.current > 0) {
         hitstopTimerRef.current = Math.max(0, hitstopTimerRef.current - dt);
       } else {
@@ -906,6 +1143,8 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
           dt,
           hero: heroRef.current,
           boss: bossRef.current,
+          microBot: microBotRef.current,
+          phase: combat.phase,
           keys: keysRef.current,
           timers: timersRef.current,
           lasers: lasersRef.current,
@@ -914,6 +1153,7 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
           banner: bannerRef.current,
           tauntCount: gameStateRef.current.taunts.length,
           onLaserHitBoss: handleLaserHitBoss,
+          onLaserHitMicroBot: handleLaserHitMicroBot,
         });
         lasersRef.current = stepOut.nextLasers;
         particlesRef.current = stepOut.nextParticles;
@@ -936,6 +1176,31 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
             0.32,
             'spark',
             40
+          );
+        }
+
+        // Emit subtle distress sparks & smoke off the weakened Boss during exposed-core finale
+        if (
+          combat.phase === 'exposed-core' &&
+          !bossRef.current.defeated &&
+          !aiSplittingRef.current &&
+          Math.random() < dt * 9
+        ) {
+          spawnParticlesInto(
+            particlesRef.current,
+            bossRef.current.x + (Math.random() - 0.5) * 68,
+            bossRef.current.y - 54 - Math.random() * 76,
+            1,
+            ['#FACC15', '#F97316', '#94A3B8', '#CBD5E1'],
+            25,
+            95,
+            -40,
+            3,
+            5,
+            0.25,
+            0.65,
+            'spark',
+            30
           );
         }
       }
@@ -975,9 +1240,13 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
         const bossLabel = activeQuest
           ? `${activeQuest.key}: ${activeQuest.summary}`
           : 'BASE CAMP — NO QUEST';
-        const tauntText = activeQuest
-          ? taunts[bossRef.current.tauntIndex % taunts.length]
-          : 'Open Console [B] or Settings [⚙]!';
+        const tauntText = !activeQuest
+          ? 'Open Console [B] or Settings [⚙]!'
+          : combat.phase === 'exposed-core'
+            ? engagedQuestKeysRef.current.has(activeQuest.key)
+              ? 'CLOSED IN JIRA? SHOOT TO FINISH!'
+              : 'ALL STEPS DONE! CLOSE IN JIRA!'
+            : taunts[bossRef.current.tauntIndex % taunts.length];
 
         drawBoss(
           ctx,
@@ -986,8 +1255,28 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
           elapsed,
           bossLabel,
           tauntText,
-          aiSplittingRef.current
+          aiSplittingRef.current,
+          combat.phase,
+          combat.microProgress,
+          hoveredTargetRef.current === 'boss-plate'
         );
+
+        if (
+          combat.phase === 'micro-wave' &&
+          combat.activeStep &&
+          combat.microProgress &&
+          !bossRef.current.defeated
+        ) {
+          drawMicroBot(
+            ctx,
+            microBotRef.current,
+            combat.activeStep.title,
+            combat.microProgress.currentIndex,
+            combat.microProgress.total,
+            hoveredTargetRef.current === 'boss',
+            elapsed
+          );
+        }
         drawHero(ctx, heroRef.current, elapsed);
         drawEffects(
           ctx,
@@ -1008,7 +1297,7 @@ export const ArcadeStage: React.FC<ArcadeStageProps> = ({ initialState }) => {
       arcadeAudio.stopGunCharge();
       window.cancelAnimationFrame(rafId);
     };
-  }, [handleLaserHitBoss, shootLaser, triggerChargedAiSplit]);
+  }, [handleLaserHitBoss, handleLaserHitMicroBot, shootLaser, triggerChargedAiSplit]);
 
   const hud = toHudSnapshot(gameState);
 

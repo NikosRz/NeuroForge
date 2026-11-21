@@ -1,5 +1,27 @@
 export type StationId = 'mind-dump' | 'quest-board' | 'energy-boost' | 'roadmap';
-export type InteractTargetId = StationId | 'boss';
+export type InteractTargetId = StationId | 'boss' | 'boss-plate';
+export type BossPhase = 'normal' | 'micro-wave' | 'exposed-core';
+
+export interface BossMicroProgress {
+  total: number;
+  done: number;
+  remaining: number;
+  currentIndex: number;
+}
+
+export interface MicroBotState {
+  activeStepId: number | null;
+  x: number;
+  y: number;
+  spawnTimer: number;
+  graceTimer: number;
+  hitFlashTimer: number;
+  shakeTimer: number;
+  hitX: number;
+  hitY: number;
+  hitW: number;
+  hitH: number;
+}
 
 export interface PlatformRect {
   id: string;
