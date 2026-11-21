@@ -5,4 +5,5 @@ export * from './background';
 export * from './stations';
 export * from './hero';
 export * from './boss';
+export * from './micro-bot';
 export * from './effects';

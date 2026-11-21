@@ -1,6 +1,27 @@
 import { inkBox, inkPoly, pxRect, wrapCanvasText } from './primitives';
-import type { BossState } from './types';
+import type { BossMicroProgress, BossPhase, BossState } from './types';
 import { BOSS_TAUNTS, CANVAS_WIDTH } from './world';
+
+export interface BossPlateRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+const BOSS_BAR_W = 308;
+const BOSS_BAR_Y = 306;
+
+export const getBossPlateRect = (bossX: number, labelLineCount = 2): BossPlateRect => {
+  const barX = Math.round(
+    Math.min(CANVAS_WIDTH - BOSS_BAR_W - 16, Math.max(16, bossX - BOSS_BAR_W / 2 - 20))
+  );
+  const lineH = 19;
+  const padY = 8;
+  const plateH = Math.max(1, labelLineCount) * lineH + padY * 2;
+  const plateY = BOSS_BAR_Y - plateH - 6;
+  return { x: barX, y: plateY, w: BOSS_BAR_W, h: plateH };
+};
 
 const shockRand = (seed: number): number => {
   const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
@@ -127,26 +148,37 @@ export const drawBoss = (
   bossLabel = 'BASE CAMP — NO QUEST',
   tauntText?: string,
   aiSplitting = false,
+  phase: BossPhase = 'normal',
+  microProgress: BossMicroProgress | null = null,
+  plateHovered = false,
 ): void => {
   const hpPct = Math.max(0, Math.round((boss.hp / boss.maxHp) * 100));
 
-  // Overhead Nameplate & HP Bar (Fix #7: larger, high-contrast 2-line wrapping nameplate)
-  const barW = 308;
-  const barX = Math.round(Math.min(CANVAS_WIDTH - barW - 16, Math.max(16, boss.x - barW / 2 - 20)));
-  const barY = 306;
+  // Overhead Nameplate & HP Bar (anchored high so Main JIRA task stays visible during micro-bot waves)
+  const barW = BOSS_BAR_W;
+  const barY = BOSS_BAR_Y;
 
   ctx.save();
   ctx.font = 'bold 15px "Silkscreen", monospace';
   const labelLines = wrapCanvasText(ctx, bossLabel, barW - 20, 2);
   const lineH = 19;
   const padY = 8;
-  const plateH = labelLines.length * lineH + padY * 2;
-  const plateY = barY - plateH - 6;
+  const plateRect = getBossPlateRect(boss.x, labelLines.length);
+  const barX = plateRect.x;
+  const plateY = plateRect.y;
+  const plateH = plateRect.h;
 
-  // Nameplate box with crisp border & cyan accent
+  // Nameplate box with crisp border & cyan accent (brightens on hover to hint QuestModal click)
   pxRect(ctx, barX - 3, plateY - 3, barW + 6, plateH + 6, '#020617');
-  pxRect(ctx, barX - 1, plateY - 1, barW + 2, plateH + 2, '#38BDF8');
-  pxRect(ctx, barX, plateY, barW, plateH, '#0F172A');
+  pxRect(
+    ctx,
+    barX - 1,
+    plateY - 1,
+    barW + 2,
+    plateH + 2,
+    plateHovered ? '#67E8F9' : phase === 'exposed-core' ? '#FACC15' : '#38BDF8'
+  );
+  pxRect(ctx, barX, plateY, barW, plateH, plateHovered ? '#1E293B' : '#0F172A');
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -159,21 +191,61 @@ export const drawBoss = (
   });
   ctx.restore();
 
-  // HP Bar frame
+  // HP Bar frame (segmented when micro-steps exist, smooth % bar otherwise)
   pxRect(ctx, barX - 2, barY - 2, barW + 4, 22, '#0F172A');
   pxRect(ctx, barX, barY, barW, 18, '#3F1419');
-  const fillW = Math.round((barW * hpPct) / 100);
-  if (fillW > 0) {
-    pxRect(ctx, barX, barY, fillW, 18, boss.hitFlashTimer > 0 ? '#FCA5A5' : '#DC2626');
-    pxRect(ctx, barX, barY, fillW, 4, '#F87171');
+
+  if (microProgress && microProgress.total > 0) {
+    const coreW = 18;
+    const corePulse = phase === 'exposed-core' && Math.floor(time * 8) % 2 === 0;
+    const coreColor = corePulse ? '#FEF08A' : phase === 'exposed-core' ? '#FACC15' : '#F59E0B';
+    pxRect(ctx, barX, barY, coreW, 18, coreColor);
+    pxRect(ctx, barX, barY, coreW, 4, '#FEF9C3');
+    pxRect(ctx, barX + coreW, barY, 2, 18, '#0F172A');
+
+    const segStartX = barX + coreW + 2;
+    const segAreaW = barW - coreW - 2;
+    const segCount = microProgress.total;
+    for (let i = 0; i < segCount; i += 1) {
+      const sx = Math.round(segStartX + (i * segAreaW) / segCount);
+      const nextX = Math.round(segStartX + ((i + 1) * segAreaW) / segCount);
+      const sw = Math.max(2, nextX - sx - (i < segCount - 1 ? 2 : 0));
+      const isFilled = i < microProgress.remaining;
+      if (isFilled) {
+        pxRect(ctx, sx, barY, sw, 18, boss.hitFlashTimer > 0 ? '#FCA5A5' : '#DC2626');
+        pxRect(ctx, sx, barY, sw, 4, '#F87171');
+      } else {
+        pxRect(ctx, sx, barY, sw, 18, '#3F1419');
+      }
+    }
+
+    ctx.save();
+    ctx.font = 'bold 11px "Silkscreen", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const barLabel =
+      phase === 'exposed-core'
+        ? 'CORE OPEN! CLOSE IN JIRA'
+        : `${microProgress.remaining}/${microProgress.total} BOTS LEFT`;
+    ctx.fillStyle = '#020617';
+    ctx.fillText(barLabel, Math.round(barX + barW / 2) + 1, barY + 10);
+    ctx.fillStyle = phase === 'exposed-core' ? '#FEF08A' : '#FFFFFF';
+    ctx.fillText(barLabel, Math.round(barX + barW / 2), barY + 9);
+    ctx.restore();
+  } else {
+    const fillW = Math.round((barW * hpPct) / 100);
+    if (fillW > 0) {
+      pxRect(ctx, barX, barY, fillW, 18, boss.hitFlashTimer > 0 ? '#FCA5A5' : '#DC2626');
+      pxRect(ctx, barX, barY, fillW, 4, '#F87171');
+    }
+    ctx.save();
+    ctx.font = 'bold 12px "Silkscreen", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillText(`${hpPct}% HP`, Math.round(barX + barW / 2), barY + 9);
+    ctx.restore();
   }
-  ctx.save();
-  ctx.font = 'bold 12px "Silkscreen", monospace';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillText(`${hpPct}% HP`, Math.round(barX + barW / 2), barY + 9);
-  ctx.restore();
 
   if (aiSplitting) {
     const pulse = 0.65 + Math.sin(time * 10) * 0.35;
@@ -187,6 +259,11 @@ export const drawBoss = (
     ctx.fillStyle = '#ECFEFF';
     ctx.fillText('⚡ AI SPLITTING QUEST...', Math.round(barX + barW / 2), barY + 35);
     ctx.restore();
+  }
+
+  // During active micro-robot wave, only render the Main JIRA Overhead Header & Segmented HP Bar
+  if (phase === 'micro-wave' && !boss.defeated) {
+    return;
   }
 
   if (boss.defeated) {
@@ -204,22 +281,26 @@ export const drawBoss = (
     boss.overrideTaunt && boss.overrideTauntTimer > 0
       ? boss.overrideTaunt
       : (tauntText ?? BOSS_TAUNTS[boss.tauntIndex]);
-  drawSpeechBubble(ctx, activeTaunt, boss.x - 16, 404);
+  drawSpeechBubble(ctx, activeTaunt, boss.x - 16, phase === 'exposed-core' ? 418 : 404);
 
-  // Heavy Articulated Red/Orange Mecha Boss (~158px tall)
-  const idleY = Math.round(Math.sin(time * 2.8) * 1.8);
-  const breathY = Math.round(Math.sin(time * 2.8 + 0.5) * 1.5);
+  // Heavy Articulated Red/Orange Mecha Boss (~158px tall; hunched when exposed-core)
+  const isExposed = phase === 'exposed-core';
+  const crouchY = isExposed ? 14 : 0;
+  const idleY = Math.round(Math.sin(time * (isExposed ? 5.2 : 2.8)) * (isExposed ? 1.2 : 1.8));
+  const breathY =
+    Math.round(Math.sin(time * (isExposed ? 5.2 : 2.8) + 0.5) * 1.5) + crouchY;
   const hitShakeX =
     boss.shakeTimer > 0 ? Math.round(Math.sin(boss.shakeTimer * 90) * 6) : 0;
   const shockShakeX = aiSplitting ? Math.round(Math.sin(time * 78) * 3.5) : 0;
-  const shakeX = hitShakeX + shockShakeX;
+  const exposedJitterX = isExposed && Math.floor(time * 12) % 7 === 0 ? 2 : 0;
+  const shakeX = hitShakeX + shockShakeX + exposedJitterX;
 
   ctx.save();
   ctx.translate(Math.round(boss.x + shakeX), Math.round(boss.y));
 
   if (hovered) {
-    ctx.fillStyle = 'rgba(239, 68, 68, 0.16)';
-    ctx.fillRect(-66, -158, 132, 158);
+    ctx.fillStyle = isExposed ? 'rgba(250, 204, 21, 0.16)' : 'rgba(239, 68, 68, 0.16)';
+    ctx.fillRect(-66, -158 + crouchY, 132, 158 - crouchY);
   }
 
   // Ground contact shadow
@@ -229,18 +310,25 @@ export const drawBoss = (
   const shockFlash = aiSplitting && Math.floor(time * 18) % 4 === 0;
   const flash = boss.hitFlashTimer > 0 || shockFlash;
   const outline = shockFlash ? '#22D3EE' : flash ? '#FEF08A' : '#060A14';
-  const redDeep = flash ? '#FFFFFF' : '#7F1D1D';
-  const redDark = flash ? '#FFFFFF' : '#991B1B';
-  const redMid = flash ? '#FFFFFF' : '#DC2626';
-  const orangeMid = flash ? '#FEF08A' : '#EA580C';
-  const orangeHi = flash ? '#FFFFFF' : '#FB923C';
-  const peachRim = flash ? '#FFFFFF' : '#FDBA74';
+  const redDeep = flash ? '#FFFFFF' : isExposed ? '#450A0A' : '#7F1D1D';
+  const redDark = flash ? '#FFFFFF' : isExposed ? '#7F1D1D' : '#991B1B';
+  const redMid = flash ? '#FFFFFF' : isExposed ? '#991B1B' : '#DC2626';
+  const orangeMid = flash ? '#FEF08A' : isExposed ? '#9A3412' : '#EA580C';
+  const orangeHi = flash ? '#FFFFFF' : isExposed ? '#C2410C' : '#FB923C';
+  const peachRim = flash ? '#FFFFFF' : isExposed ? '#FB923C' : '#FDBA74';
   const mechDark = flash ? '#CBD5E1' : '#1E293B';
   const mechMid = flash ? '#E2E8F0' : '#475569';
   const mechSilver = flash ? '#FFFFFF' : '#94A3B8';
   const mechShine = flash ? '#FFFFFF' : '#CBD5E1';
-  const visor = flash ? '#FFFFFF' : '#FACC15';
-  const coreGreen = flash ? '#FFFFFF' : '#22C55E';
+  const visorFlicker = isExposed && Math.floor(time * 10) % 3 === 0;
+  const visor = flash ? '#FFFFFF' : visorFlicker ? '#EF4444' : '#FACC15';
+  const coreGreen = flash
+    ? '#FFFFFF'
+    : isExposed
+      ? Math.floor(time * 9) % 2 === 0
+        ? '#FEF08A'
+        : '#22D3EE'
+      : '#22C55E';
 
   // --- LEFT (FRONT-FACING) & RIGHT (REAR-PERSPECTIVE) HEAVY LEGS ---
   // Left leg (planted forward-left)
@@ -669,6 +757,21 @@ export const drawBoss = (
   // Electric shock lightning effect while local AI is splitting the quest
   if (aiSplitting) {
     drawElectricShock(ctx, time);
+  }
+
+  // Exposed-core pulsing glow & crackling arc when all micro-steps are done
+  if (isExposed && !aiSplitting) {
+    const corePulse = 0.22 + Math.abs(Math.sin(time * 7)) * 0.24;
+    ctx.save();
+    ctx.fillStyle = `rgba(250, 204, 21, ${corePulse.toFixed(3)})`;
+    ctx.beginPath();
+    ctx.arc(0, -106 + breathY, 22, 0, Math.PI * 2);
+    ctx.fill();
+    const tick = Math.floor(time * 10);
+    if (tick % 3 === 0) {
+      drawLightningBolt(ctx, -12, -112 + breathY, 14, -96 + breathY, 4, 6, tick * 5, '#FEF08A');
+    }
+    ctx.restore();
   }
 
   ctx.restore();

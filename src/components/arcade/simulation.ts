@@ -5,12 +5,15 @@ import {
   CANVAS_WIDTH,
   PLATFORMS,
   STATIONS,
+  getBossPlateRect,
+  type BossPhase,
   type BossState,
   type FloatingText,
   type HeroState,
   type InteractTargetId,
   type LaserBolt,
   type LevelUpBanner,
+  type MicroBotState,
   type Particle,
   type StationId,
 } from '@/lib/arcade';
@@ -71,7 +74,9 @@ export const getCanvasPoint = (
 export const hitTestTarget = (
   px: number,
   py: number,
-  boss: BossState
+  boss: BossState,
+  phase: BossPhase,
+  microBot: MicroBotState
 ): InteractTargetId | null => {
   for (const st of STATIONS) {
     if (
@@ -83,6 +88,29 @@ export const hitTestTarget = (
       return st.id;
     }
   }
+
+  const plate = getBossPlateRect(boss.x);
+  if (
+    px >= plate.x &&
+    px <= plate.x + plate.w &&
+    py >= plate.y &&
+    py <= plate.y + plate.h
+  ) {
+    return 'boss-plate';
+  }
+
+  if (phase === 'micro-wave' && !boss.defeated) {
+    if (
+      px >= microBot.hitX &&
+      px <= microBot.hitX + microBot.hitW &&
+      py >= microBot.hitY &&
+      py <= microBot.hitY + microBot.hitH
+    ) {
+      return 'boss';
+    }
+    return null;
+  }
+
   if (
     !boss.defeated &&
     px >= boss.hitX &&
@@ -134,6 +162,8 @@ export interface StepSimulationContext {
   dt: number;
   hero: HeroState;
   boss: BossState;
+  microBot: MicroBotState;
+  phase: BossPhase;
   keys: KeyState;
   timers: SimulationTimers;
   lasers: LaserBolt[];
@@ -142,12 +172,15 @@ export interface StepSimulationContext {
   banner: LevelUpBanner;
   tauntCount: number;
   onLaserHitBoss: (bolt: LaserBolt) => void;
+  onLaserHitMicroBot: (bolt: LaserBolt) => void;
 }
 
 export const stepArcadeSimulation = ({
   dt,
   hero,
   boss,
+  microBot,
+  phase,
   keys,
   timers,
   lasers,
@@ -156,6 +189,7 @@ export const stepArcadeSimulation = ({
   banner,
   tauntCount,
   onLaserHitBoss,
+  onLaserHitMicroBot,
 }: StepSimulationContext): {
   nextLasers: LaserBolt[];
   nextParticles: Particle[];
@@ -181,6 +215,13 @@ export const stepArcadeSimulation = ({
     boss.overrideTauntTimer = Math.max(0, boss.overrideTauntTimer - dt);
     if (boss.overrideTauntTimer === 0) boss.overrideTaunt = null;
   }
+
+  if (microBot.spawnTimer > 0) microBot.spawnTimer = Math.max(0, microBot.spawnTimer - dt);
+  if (microBot.graceTimer > 0) microBot.graceTimer = Math.max(0, microBot.graceTimer - dt);
+  if (microBot.hitFlashTimer > 0) {
+    microBot.hitFlashTimer = Math.max(0, microBot.hitFlashTimer - dt);
+  }
+  if (microBot.shakeTimer > 0) microBot.shakeTimer = Math.max(0, microBot.shakeTimer - dt);
 
   // Boss speech bubble cycle (~5s)
   boss.tauntTimer += dt;
@@ -362,7 +403,17 @@ export const stepArcadeSimulation = ({
       continue;
     }
 
-    if (
+    if (phase === 'micro-wave' && !boss.defeated) {
+      if (
+        bolt.x >= microBot.hitX + 8 &&
+        bolt.x <= microBot.hitX + microBot.hitW - 8 &&
+        bolt.y >= microBot.hitY &&
+        bolt.y <= microBot.hitY + microBot.hitH
+      ) {
+        onLaserHitMicroBot(bolt);
+        continue;
+      }
+    } else if (
       !boss.defeated &&
       bolt.x >= boss.hitX + 12 &&
       bolt.x <= boss.hitX + boss.hitW - 12 &&
