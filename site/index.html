@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NeuroForge — Self-Hosted 16-Bit RPG Wrapper for JIRA (Built for ADHD)</title>
+    <meta
+      name="description"
+      content="Not another project management tool. NeuroForge is a 100% self-hosted, zero-leak 16-bit RPG wrapper for the JIRA you already use — with private ADHD micro-tasks and on-demand local AI."
+    />
+    <meta property="og:title" content="NeuroForge — 16-Bit RPG Wrapper for JIRA" />
+    <meta
+      property="og:description"
+      content="Self-hosted, corporate-safe, ADHD-friendly wrapper for JIRA with private local micro-tasks and on-demand Ollama AI."
+    />
+    <meta property="og:type" content="website" />
+    <link rel="icon" type="image/svg+xml" href="./assets/hero-portrait.svg" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Silkscreen:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+
+    <!-- Header -->
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="#top" aria-label="NeuroForge Home">
+          <img
+            class="brand-avatar pixelated"
+            src="./assets/hero-portrait.svg"
+            width="40"
+            height="40"
+            alt=""
+            aria-hidden="true"
+          />
+          <span class="brand-text">
+            <span class="brand-name">NEUROFORGE</span>
+            <span class="brand-sub">JIRA RPG Wrapper</span>
+          </span>
+        </a>
+
+        <nav class="nav-links" aria-label="Primary">
+          <a href="#why">Why NeuroForge</a>
+          <a href="#architecture">Zero-Leak Local</a>
+          <a href="#stations">Command Room</a>
+          <a href="#quickstart">Quick Start</a>
+        </nav>
+
+        <div class="header-actions">
+          <a
+            class="btn btn-secondary btn-sm"
+            href="https://github.com/nikosrz/NeuroForge"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path
+                fill-rule="evenodd"
+                d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            GitHub
+          </a>
+          <button
+            id="menu-toggle"
+            class="menu-toggle"
+            type="button"
+            aria-label="Toggle navigation menu"
+            aria-expanded="false"
+            aria-controls="mobile-nav"
+          >
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <nav id="mobile-nav" class="mobile-nav" aria-label="Mobile navigation">
+        <a href="#why">Why NeuroForge</a>
+        <a href="#architecture">Zero-Leak Local</a>
+        <a href="#stations">Command Room</a>
+        <a href="#quickstart">Quick Start</a>
+      </nav>
+    </header>
+
+    <main id="main-content">
+      <!-- 1. HERO SECTION -->
+      <section id="top" class="hero">
+        <div class="container hero-grid">
+          <div>
+            <div class="eyebrow">
+              <span class="eyebrow-dot" aria-hidden="true"></span>
+              <span>100% SELF-HOSTED · ZERO CLOUD · ADHD-FRIENDLY</span>
+            </div>
+
+            <h1 class="hero-title">
+              Not another project management tool.
+              <span class="highlight">A 16-bit RPG wrapper for the JIRA you already use.</span>
+            </h1>
+
+            <p class="hero-lead">
+              Escape corporate backlog paralysis without migrating a single ticket. NeuroForge runs
+              locally on your machine, turns one JIRA issue at a time into a Mecha Boss fight, splits
+              overwhelming work into private micro-tasks with on-demand local AI, and never leaks a
+              single byte of company data.
+            </p>
+
+            <div class="hero-cta-row">
+              <a class="btn btn-primary" href="#quickstart">
+                <svg class="icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path
+                    fill-rule="evenodd"
+                    d="M2 10a8 8 0 1 1 16 0 8 8 0 0 1-16 0Zm6.39-2.908a.75.75 0 0 1 .766.027l3.5 2.25a.75.75 0 0 1 0 1.262l-3.5 2.25A.75.75 0 0 1 8 12.25v-4.5a.75.75 0 0 1 .39-.658Z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+                Quick Start (2 min)
+              </a>
+              <a
+                class="btn btn-secondary"
+                href="https://github.com/nikosrz/NeuroForge"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Explore Source on GitHub
+              </a>
+            </div>
+
+            <ul class="trust-strip">
+              <li>
+                <svg class="icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path
+                    fill-rule="evenodd"
+                    d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+                Corporate-policy safe
+              </li>
+              <li>
+                <svg class="icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path
+                    fill-rule="evenodd"
+                    d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+                0 MB idle AI RAM
+              </li>
+              <li>
+                <svg class="icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path
+                    fill-rule="evenodd"
+                    d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+                JIRA Cloud &amp; Server/DC
+              </li>
+            </ul>
+          </div>
+
+          <!-- Recorded 16-bit Arcade Gameplay Clip -->
+          <div class="arcade-frame">
+            <div class="arcade-topbar">
+              <div class="hud-pills">
+                <span class="hud-pill hud-pill-green">16-BIT STAGE</span>
+                <span class="hud-pill hud-pill-cyan">WALK · JUMP · SHOOT</span>
+              </div>
+              <span>LOCALHOST:3000</span>
+            </div>
+
+            <div class="stage-canvas-wrap">
+              <video
+                class="stage-video pixelated"
+                autoplay
+                loop
+                muted
+                playsinline
+                preload="auto"
+                aria-label="Gameplay clip of the NeuroForge Hero walking, jumping, and shooting a JIRA Mecha Boss"
+              >
+                <source src="./assets/combat-flow.webm" type="video/webm" />
+              </video>
+            </div>
+
+            <div class="video-caption-bar">
+              <span>One pinned JIRA ticket becomes a Mecha Boss on your single-screen stage.</span>
+              <span class="video-caption-tag">NO BACKLOG WALL</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. WHY NEUROFORGE (BENTO FEATURE GRID) -->
+      <section id="why" class="section">
+        <div class="container">
+          <div class="section-header">
+            <span class="section-kicker">WHY IT'S COOL</span>
+            <h2 class="section-title">Designed for real corporate work — and real ADHD brains.</h2>
+            <p class="section-subtitle">
+              Keep your team's JIRA workflow untouched while giving yourself a private, low-friction,
+              dopamine-friendly cockpit on localhost.
+            </p>
+          </div>
+
+          <div class="bento-grid">
+            <!-- Pillar 1: Wrapper for JIRA -->
+            <article class="feature-card feature-card--hero">
+              <div class="feature-top">
+                <span class="feature-icon-box" aria-hidden="true">
+                  <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+                    />
+                  </svg>
+                </span>
+                <span class="feature-tag">ZERO MIGRATION</span>
+              </div>
+
+              <h3>Not Another PM Tool — A Wrapper for Your Existing JIRA</h3>
+              <p>
+                You don't need manager approval, team buy-in, or a new SaaS subscription. NeuroForge
+                connects straight to your existing <strong>JIRA Cloud</strong> or
+                <strong>JIRA Server / Data Center</strong> account.
+              </p>
+
+              <ul class="feature-points">
+                <li>
+                  <svg class="icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.25 7.3a1 1 0 0 1-1.42 0l-3.25-3.27a1 1 0 1 1 1.42-1.41l2.54 2.557 6.54-6.585a1 1 0 0 1 1.414-.006Z" clip-rule="evenodd" />
+                  </svg>
+                  <span>Your team stays in JIRA; you work in a calm, single-screen arcade room</span>
+                </li>
+                <li>
+                  <svg class="icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.25 7.3a1 1 0 0 1-1.42 0l-3.25-3.27a1 1 0 1 1 1.42-1.41l2.54 2.557 6.54-6.585a1 1 0 0 1 1.414-.006Z" clip-rule="evenodd" />
+                  </svg>
+                  <span>Search issues, pin one active Boss, and transition real JIRA statuses in place</span>
+                </li>
+                <li>
+                  <svg class="icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.25 7.3a1 1 0 0 1-1.42 0l-3.25-3.27a1 1 0 1 1 1.42-1.41l2.54 2.557 6.54-6.585a1 1 0 0 1 1.414-.006Z" clip-rule="evenodd" />
+                  </svg>
+                  <span>No double-entry, no shadow boards, no extra tickets to maintain</span>
+                </li>
+              </ul>
+            </article>
+
+            <!-- Pillar 2: 100% Self-Hosted & Enterprise-Safe -->
+            <article class="feature-card feature-card--hero">
+              <div class="feature-top">
+                <span class="feature-icon-box feature-icon-box--green" aria-hidden="true">
+                  <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"
+                    />
+                  </svg>
+                </span>
+                <span class="feature-tag">100% PRIVATE</span>
+              </div>
+
+              <h3>Self-Hosted &amp; Corporate-Policy Safe</h3>
+              <p>
+                Everything lives on your machine in a local SQLite database
+                (<code class="font-mono">data/neuroforge.db</code>). Zero cloud backend, zero
+                telemetry, zero data leaks — safe to use with sensitive corporate tickets without
+                violating infosec policies.
+              </p>
+
+              <ul class="feature-points">
+                <li>
+                  <svg class="icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.25 7.3a1 1 0 0 1-1.42 0l-3.25-3.27a1 1 0 1 1 1.42-1.41l2.54 2.557 6.54-6.585a1 1 0 0 1 1.414-.006Z" clip-rule="evenodd" />
+                  </svg>
+                  <span>Runs purely on <code class="font-mono">localhost</code> — no external SaaS accounts</span>
+                </li>
+                <li>
+                  <svg class="icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.25 7.3a1 1 0 0 1-1.42 0l-3.25-3.27a1 1 0 1 1 1.42-1.41l2.54 2.557 6.54-6.585a1 1 0 0 1 1.414-.006Z" clip-rule="evenodd" />
+                  </svg>
+                  <span>Credentials, private notes, and micro-steps never leave your disk</span>
+                </li>
+              </ul>
+            </article>
+
+            <!-- Pillar 3 (Full-Width Spotlight): Local On-Demand AI + ADHD Micro-Task Split Video -->
+            <article class="feature-card feature-card--adhd">
+              <div class="feature-top">
+                <span class="feature-icon-box feature-icon-box--cyan" aria-hidden="true">
+                  <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 0 0 2.25-2.25V6.75a2.25 2.25 0 0 0-2.25-2.25H6.75A2.25 2.25 0 0 0 4.5 6.75v10.5a2.25 2.25 0 0 0 2.25 2.25Zm.75-12h9v9h-9v-9Z"
+                    />
+                  </svg>
+                </span>
+                <span class="feature-tag">ON-DEMAND LOCAL AI · ADHD-FIRST</span>
+              </div>
+
+              <div class="adhd-split-row">
+                <div>
+                  <h3>Charge Blaster → Local AI Splits Big Tickets Into Private Micro-Bots</h3>
+                  <p style="margin-top: 10px">
+                    Overwhelmed by a vague corporate ticket? Hold <kbd class="kbd">Space</kbd> to
+                    <strong>charge your plasma blaster</strong> and fire an AI Split shot. Local
+                    <strong>Ollama</strong> (<code class="font-mono">qwen2.5:3b</code>) wakes up on
+                    demand, slices the JIRA Boss into bite-sized <strong>Micro-Bots</strong> stored
+                    strictly on your machine — <strong>without altering the actual JIRA ticket</strong>
+                    — and shuts right back down so it never wastes RAM in the background.
+                  </p>
+                  <ul class="feature-points" style="margin-top: 14px">
+                    <li>
+                      <svg class="icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.25 7.3a1 1 0 0 1-1.42 0l-3.25-3.27a1 1 0 1 1 1.42-1.41l2.54 2.557 6.54-6.585a1 1 0 0 1 1.414-.006Z" clip-rule="evenodd" />
+                      </svg>
+                      <span><strong>Saves RAM:</strong> Ollama runs only during the split, then sleeps at 0 MB</span>
+                    </li>
+                    <li>
+                      <svg class="icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.25 7.3a1 1 0 0 1-1.42 0l-3.25-3.27a1 1 0 1 1 1.42-1.41l2.54 2.557 6.54-6.585a1 1 0 0 1 1.414-.006Z" clip-rule="evenodd" />
+                      </svg>
+                      <span><strong>Zero JIRA noise:</strong> Private micro-tasks never spam your team's board</span>
+                    </li>
+                    <li>
+                      <svg class="icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.25 7.3a1 1 0 0 1-1.42 0l-3.25-3.27a1 1 0 1 1 1.42-1.41l2.54 2.557 6.54-6.585a1 1 0 0 1 1.414-.006Z" clip-rule="evenodd" />
+                      </svg>
+                      <span><strong>ADHD momentum:</strong> Beat one tiny Micro-Bot at a time for +15 XP hits</span>
+                    </li>
+                  </ul>
+
+                  <div class="ram-meter" style="margin-top: 16px">
+                    <span>Idle Local AI Memory Footprint</span>
+                    <span class="ram-badge">0 MB RAM (SLEEP)</span>
+                  </div>
+                </div>
+
+                <div class="ai-video-frame">
+                  <div class="stage-canvas-wrap">
+                    <video
+                      class="stage-video pixelated"
+                      autoplay
+                      loop
+                      muted
+                      playsinline
+                      preload="metadata"
+                      aria-label="Gameplay clip of charging the blaster to wake local Ollama and split a JIRA Boss into local Micro-Bots"
+                    >
+                      <source src="./assets/ai-split-flow.webm" type="video/webm" />
+                    </video>
+                  </div>
+                  <div class="video-caption-bar">
+                    <span>Hold Space → Local Ollama splits Boss → Micro-Bot spawns</span>
+                    <span class="video-caption-tag">0 MB IDLE RAM</span>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <!-- Pillar 4: Zero-Guilt Economy -->
+            <article class="feature-card feature-card--half">
+              <div class="feature-top">
+                <span class="feature-icon-box feature-icon-box--gold" aria-hidden="true">
+                  <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"
+                    />
+                  </svg>
+                </span>
+                <span class="feature-tag">ANTI-BURNOUT</span>
+              </div>
+
+              <h3>Zero-Guilt Dopamine Economy</h3>
+              <p>
+                Unchecking a step or reopening a ticket <strong>never deducts XP</strong>. Missing
+                days uses Streak Shields instead of wiping progress, and a 1x/week Energy Core Boost
+                restores Stamina to 100 when you need a reset.
+              </p>
+            </article>
+
+            <!-- Pillar 5: Time-Blindness & Mind-Dump -->
+            <article class="feature-card feature-card--half">
+              <div class="feature-top">
+                <span class="feature-icon-box feature-icon-box--rose" aria-hidden="true">
+                  <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                    />
+                  </svg>
+                </span>
+                <span class="feature-tag">FOCUS ANCHORS</span>
+              </div>
+
+              <h3>Time-Blindness &amp; Mind-Dump Guards</h3>
+              <p>
+                Keep your next Google/Outlook <code class="font-mono">.ics</code> meeting pinned in
+                the top HUD so hyperfocus never makes you late. Press <kbd class="kbd">M</kbd> to
+                dump stray thoughts in 2 seconds and return straight to your Boss.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. ZERO-LEAK LOCAL ARCHITECTURE -->
+      <section id="architecture" class="section">
+        <div class="container">
+          <div class="section-header">
+            <span class="section-kicker">ZERO-LEAK ARCHITECTURE</span>
+            <h2 class="section-title">Your tickets never touch a third-party server.</h2>
+            <p class="section-subtitle">
+              NeuroForge runs as a local Next.js app on your laptop. It talks directly to the tools
+              your company already approves — with zero cloud relay in between.
+            </p>
+          </div>
+
+          <div class="arch-panel">
+            <div class="arch-flow">
+              <div class="arch-node">
+                <span class="arch-node-label">COMPANY TOOLS</span>
+                <h3>Existing JIRA &amp; Calendar</h3>
+                <p>
+                  Direct REST API calls to your JIRA Cloud / Server instance and read-only private
+                  <code class="font-mono">.ics</code> calendar feeds.
+                </p>
+                <div class="arch-chips">
+                  <span class="chip">JIRA REST API</span>
+                  <span class="chip">Private .ics</span>
+                </div>
+              </div>
+
+              <div class="arch-arrow" aria-hidden="true">
+                <span>Direct HTTPS ↔</span>
+              </div>
+
+              <div class="arch-node arch-node--local">
+                <span class="arch-node-label">YOUR MACHINE (LOCALHOST)</span>
+                <h3>NeuroForge Cockpit</h3>
+                <p>
+                  All credentials, micro-tasks, XP progress, and Mind-Dump notes stay inside your
+                  local SQLite database (<code class="font-mono">data/neuroforge.db</code>).
+                </p>
+                <div class="arch-chips">
+                  <span class="chip">127.0.0.1:3000</span>
+                  <span class="chip">SQLite WAL</span>
+                  <span class="chip">No Telemetry</span>
+                </div>
+              </div>
+
+              <div class="arch-arrow" aria-hidden="true">
+                <span>On-Demand ↔</span>
+              </div>
+
+              <div class="arch-node">
+                <span class="arch-node-label">LOCAL AI ENGINE</span>
+                <h3>Ollama (Sleep by Default)</h3>
+                <p>
+                  Wakes up only when you split a quest or ask for a Quick Task, then powers down so
+                  your RAM stays free for your IDE &amp; Docker.
+                </p>
+                <div class="arch-chips">
+                  <span class="chip">qwen2.5:3b</span>
+                  <span class="chip">0 MB Idle</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="arch-guarantee">
+              <span class="guarantee-pill">
+                <svg class="icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path
+                    fill-rule="evenodd"
+                    d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+                100% Local Data Boundary — No Cloud Accounts, No SaaS Lock-In
+              </span>
+              <span>Works offline in Clean Base-Camp mode too.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. INSIDE THE COMMAND ROOM (INTERACTIVE STATIONS) -->
+      <section id="stations" class="section">
+        <div class="container">
+          <div class="section-header">
+            <span class="section-kicker">INSIDE THE COMMAND ROOM</span>
+            <h2 class="section-title">One zero-scroll room. Six focused stations.</h2>
+            <p class="section-subtitle">
+              Instead of 20 browser tabs, every workflow lives at a physical station you can jump to
+              or trigger with a single hotkey.
+            </p>
+          </div>
+
+          <div class="stations-layout">
+            <div class="station-tabs" role="tablist" aria-label="NeuroForge room stations">
+              <button class="station-tab" type="button" role="tab" aria-selected="true" data-station="boss">
+                <span class="station-tab-name">Mecha Boss Enemy</span>
+                <kbd class="kbd">Space</kbd>
+              </button>
+              <button class="station-tab" type="button" role="tab" aria-selected="false" data-station="minddump">
+                <span class="station-tab-name">Mind-Dump Data Pod</span>
+                <kbd class="kbd">M</kbd>
+              </button>
+              <button class="station-tab" type="button" role="tab" aria-selected="false" data-station="console">
+                <span class="station-tab-name">Command Console</span>
+                <kbd class="kbd">B</kbd>
+              </button>
+              <button class="station-tab" type="button" role="tab" aria-selected="false" data-station="energy">
+                <span class="station-tab-name">Energy Core</span>
+                <kbd class="kbd">Boost</kbd>
+              </button>
+              <button class="station-tab" type="button" role="tab" aria-selected="false" data-station="radar">
+                <span class="station-tab-name">Holo-Radar</span>
+                <kbd class="kbd">R</kbd>
+              </button>
+              <button class="station-tab" type="button" role="tab" aria-selected="false" data-station="calendar">
+                <span class="station-tab-name">Next Meeting Pill</span>
+                <kbd class="kbd">C</kbd>
+              </button>
+            </div>
+
+            <div class="station-detail" role="tabpanel" aria-live="polite">
+              <div>
+                <div class="station-detail-head">
+                  <span id="station-detail-tag" class="section-kicker" style="margin-bottom: 0">
+                    ACTIVE JIRA TICKET
+                  </span>
+                  <kbd id="station-detail-hotkey" class="kbd">Space / E</kbd>
+                </div>
+                <h3 id="station-detail-title" style="margin-top: 10px">Mecha Boss Enemy</h3>
+                <p id="station-detail-summary" style="margin-top: 10px"></p>
+                <ul id="station-detail-bullets" class="feature-points" style="margin-top: 16px"></ul>
+              </div>
+
+              <div class="controls-bar">
+                <span><strong>Move:</strong> <kbd class="kbd">A</kbd> <kbd class="kbd">D</kbd></span>
+                <span><strong>Jump:</strong> <kbd class="kbd">W</kbd></span>
+                <span><strong>Drop:</strong> <kbd class="kbd">S</kbd></span>
+                <span><strong>Action / Fire:</strong> <kbd class="kbd">Space</kbd> / <kbd class="kbd">E</kbd></span>
+                <span><strong>Close Modal:</strong> <kbd class="kbd">ESC</kbd></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Real In-App Detail Captures -->
+          <div class="detail-gallery" aria-label="In-app UI and sprite details">
+            <figure class="detail-card detail-card--sprite" style="margin: 0">
+              <div class="detail-img-wrap detail-img-wrap--square">
+                <img
+                  class="detail-img detail-img--contain pixelated"
+                  src="./assets/hero.svg"
+                  alt="16-bit Cyber-Commando Hero sprite inside NeuroForge"
+                  loading="lazy"
+                />
+              </div>
+              <figcaption class="detail-body">
+                <span class="detail-label">PLAYER SPRITE</span>
+                <h3>Cyber-Commando Hero</h3>
+                <p>Run, jetpack-jump across 3 platform tiers, fire plasma bolts, or hold Space to charge an AI Split shot.</p>
+              </figcaption>
+            </figure>
+
+            <figure class="detail-card detail-card--sprite" style="margin: 0">
+              <div class="detail-img-wrap detail-img-wrap--square">
+                <img
+                  class="detail-img detail-img--contain pixelated"
+                  src="./assets/boss.svg"
+                  alt="Mecha Boss enemy sprite inside NeuroForge"
+                  loading="lazy"
+                />
+              </div>
+              <figcaption class="detail-body">
+                <span class="detail-label">PINNED JIRA ISSUE</span>
+                <h3>Mecha Boss Enemy</h3>
+                <p>Your single active JIRA ticket with live HP bar, deflect shield, and boss taunts — zero backlog clutter.</p>
+              </figcaption>
+            </figure>
+
+            <figure class="detail-card detail-card--sprite" style="margin: 0">
+              <div class="detail-img-wrap detail-img-wrap--square">
+                <img
+                  class="detail-img detail-img--contain pixelated"
+                  src="./assets/microbot.svg"
+                  alt="Local Micro-Bot sprite spawned from AI task split"
+                  loading="lazy"
+                />
+              </div>
+              <figcaption class="detail-body">
+                <span class="detail-label">PRIVATE MICRO-TASK</span>
+                <h3>Local Micro-Bot</h3>
+                <p>Each local AI micro-step spawns as a bite-sized robot. Clear them for +15 XP wins without touching JIRA.</p>
+              </figcaption>
+            </figure>
+
+            <figure class="detail-card detail-card--modal" style="margin: 0">
+              <div class="detail-img-wrap">
+                <img
+                  class="detail-img detail-img--contain"
+                  src="./assets/detail-minddump.png"
+                  alt="Mind-Dump Data Pod modal with saved thoughts and time estimates"
+                  loading="lazy"
+                />
+              </div>
+              <figcaption class="detail-body">
+                <span class="detail-label">HOTKEY [M]</span>
+                <h3>Mind-Dump Data Pod</h3>
+                <p>Unload stray thoughts in one keypress and ask local Ollama for a 5m, 15m, or 30m Quick Task match.</p>
+              </figcaption>
+            </figure>
+
+            <figure class="detail-card detail-card--modal" style="margin: 0">
+              <div class="detail-img-wrap">
+                <img
+                  class="detail-img detail-img--contain"
+                  src="./assets/detail-quest-modal.png"
+                  alt="Quest Modal showing Battle Turn timer, JIRA controls, and micro-steps"
+                  loading="lazy"
+                />
+              </div>
+              <figcaption class="detail-body">
+                <span class="detail-label">QUEST MODAL</span>
+                <h3>Battle Turns &amp; JIRA Controls</h3>
+                <p>Launch 15m/25m Battle Turns, check off private micro-steps, or transition the real JIRA ticket status.</p>
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. HOW TO USE IT (3-STEP QUICK START) -->
+      <section id="quickstart" class="section">
+        <div class="container">
+          <div class="section-header">
+            <span class="section-kicker">HOW TO USE IT</span>
+            <h2 class="section-title">Up and running on localhost in 2 minutes.</h2>
+            <p class="section-subtitle">
+              Requires only Node.js 20+. Ollama is optional and can even be installed and managed
+              directly from the in-app Settings modal on macOS &amp; Linux.
+            </p>
+          </div>
+
+          <div class="steps-grid">
+            <article class="step-card">
+              <span class="step-num">STEP 01</span>
+              <h3>Clone &amp; Install</h3>
+              <p>Grab the repository and install dependencies locally.</p>
+              <div class="code-block">
+                <pre><code>git clone https://github.com/nikosrz/NeuroForge.git
+cd NeuroForge
+npm install</code></pre>
+                <button
+                  class="copy-btn"
+                  type="button"
+                  aria-label="Copy clone and install commands"
+                  data-copy="git clone https://github.com/nikosrz/NeuroForge.git && cd NeuroForge && npm install"
+                >
+                  <svg class="icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h3.879a1.5 1.5 0 0 1 1.06.44l3.122 3.12A1.5 1.5 0 0 1 17 6.622V12.5a1.5 1.5 0 0 1-1.5 1.5h-1v-3.379a3 3 0 0 0-.879-2.121L10.5 5.379A3 3 0 0 0 8.379 4.5H7v-1Z" />
+                    <path d="M4.5 6A1.5 1.5 0 0 0 3 7.5v9A1.5 1.5 0 0 0 4.5 18h7a1.5 1.5 0 0 0 1.5-1.5v-5.879a1.5 1.5 0 0 0-.44-1.06L9.44 6.439A1.5 1.5 0 0 0 8.378 6H4.5Z" />
+                  </svg>
+                </button>
+              </div>
+            </article>
+
+            <article class="step-card">
+              <span class="step-num">STEP 02</span>
+              <h3>Launch Locally</h3>
+              <p>Start the dev server (or build for daily production use).</p>
+              <div class="code-block">
+                <pre><code>npm run dev
+# Or production mode:
+npm run build && npm start</code></pre>
+                <button
+                  class="copy-btn"
+                  type="button"
+                  aria-label="Copy launch command"
+                  data-copy="npm run dev"
+                >
+                  <svg class="icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h3.879a1.5 1.5 0 0 1 1.06.44l3.122 3.12A1.5 1.5 0 0 1 17 6.622V12.5a1.5 1.5 0 0 1-1.5 1.5h-1v-3.379a3 3 0 0 0-.879-2.121L10.5 5.379A3 3 0 0 0 8.379 4.5H7v-1Z" />
+                    <path d="M4.5 6A1.5 1.5 0 0 0 3 7.5v9A1.5 1.5 0 0 0 4.5 18h7a1.5 1.5 0 0 0 1.5-1.5v-5.879a1.5 1.5 0 0 0-.44-1.06L9.44 6.439A1.5 1.5 0 0 0 8.378 6H4.5Z" />
+                  </svg>
+                </button>
+              </div>
+            </article>
+
+            <article class="step-card">
+              <span class="step-num">STEP 03</span>
+              <h3>Connect &amp; Fight</h3>
+              <p>
+                Open <code class="font-mono">http://localhost:3000</code>. Start in
+                <strong>Clean Base-Camp</strong> mode immediately, or open Settings to plug in JIRA,
+                <code class="font-mono">.ics</code> calendars, and on-demand Ollama.
+              </p>
+              <div class="code-block">
+                <pre><code>http://localhost:3000</code></pre>
+                <button
+                  class="copy-btn"
+                  type="button"
+                  aria-label="Copy localhost URL"
+                  data-copy="http://localhost:3000"
+                >
+                  <svg class="icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h3.879a1.5 1.5 0 0 1 1.06.44l3.122 3.12A1.5 1.5 0 0 1 17 6.622V12.5a1.5 1.5 0 0 1-1.5 1.5h-1v-3.379a3 3 0 0 0-.879-2.121L10.5 5.379A3 3 0 0 0 8.379 4.5H7v-1Z" />
+                    <path d="M4.5 6A1.5 1.5 0 0 0 3 7.5v9A1.5 1.5 0 0 0 4.5 18h7a1.5 1.5 0 0 0 1.5-1.5v-5.879a1.5 1.5 0 0 0-.44-1.06L9.44 6.439A1.5 1.5 0 0 0 8.378 6H4.5Z" />
+                  </svg>
+                </button>
+              </div>
+            </article>
+          </div>
+
+          <div class="prereq-note">
+            <strong>Tip:</strong> Want to test the room before connecting corporate JIRA? Launch it
+            right away — Clean Base-Camp mode lets you try Mind-Dump (<kbd class="kbd">M</kbd>),
+            controls, and local Ollama before entering any API token.
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. FINAL CTA -->
+      <section class="section" style="padding-top: 24px">
+        <div class="container">
+          <div class="cta-banner">
+            <h2>Turn your next JIRA ticket into a Boss fight you actually finish.</h2>
+            <p>
+              Self-hosted, private by design, and built to work with the JIRA your company already
+              runs.
+            </p>
+            <div class="cta-actions">
+              <a
+                class="btn btn-primary"
+                href="https://github.com/nikosrz/NeuroForge"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Star &amp; Clone on GitHub
+              </a>
+              <a class="btn btn-secondary" href="#quickstart">Quick Start (2 min)</a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div>
+          <strong style="color: var(--text-primary)">NeuroForge</strong> — Created by
+          <a
+            href="https://nikos.click"
+            target="_blank"
+            rel="noopener noreferrer"
+            style="color: var(--accent-cyan)"
+            >Nikos Rzewucki</a
+          >.
+          <div style="margin-top: 6px">
+            Source-available for personal, non-commercial use and personal modification.
+          </div>
+        </div>
+
+        <div class="stack-pills" aria-label="Technology stack">
+          <span class="chip">Next.js 15</span>
+          <span class="chip">SQLite</span>
+          <span class="chip">Ollama AI</span>
+          <span class="chip">HTML5 Canvas</span>
+          <span class="chip">Web Audio</span>
+        </div>
+
+        <div class="footer-links">
+          <a href="https://github.com/nikosrz/NeuroForge" target="_blank" rel="noopener noreferrer">
+            GitHub
+          </a>
+          <a
+            href="https://github.com/nikosrz/NeuroForge/blob/main/LICENSE"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            License
+          </a>
+          <a href="https://nikos.click" target="_blank" rel="noopener noreferrer">nikos.click</a>
+        </div>
+      </div>
+    </footer>
+
+    <script defer src="./app.js"></script>
+  </body>
+</html>

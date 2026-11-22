@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40">
+  <!-- Deep cyber navy frame background -->
+  <rect x="0" y="0" width="40" height="40" fill="#111C33" />
+
+  <!-- Sculpted armor shoulders & collar -->
+  <polygon
+    points="3,40 7,30 33,30 37,40"
+    fill="#1E40AF"
+    stroke="#060A14"
+    stroke-width="2"
+    stroke-linejoin="round"
+  />
+  <rect x="12" y="31" width="16" height="9" fill="#E2E8F0" stroke="#060A14" stroke-width="1.5" />
+
+  <!-- Beveled blue commando helmet -->
+  <polygon
+    points="9,10 15,5 25,5 31,10 31,29 9,29"
+    fill="#2563EB"
+    stroke="#060A14"
+    stroke-width="2"
+    stroke-linejoin="round"
+  />
+  <!-- Top crest highlight -->
+  <rect x="14" y="7" width="12" height="3" fill="#93C5FD" />
+
+  <!-- Ear-com side pods -->
+  <rect x="5" y="14" width="5" height="11" fill="#1E3A8A" stroke="#060A14" stroke-width="1.5" />
+  <rect x="30" y="14" width="5" height="11" fill="#1E3A8A" stroke="#060A14" stroke-width="1.5" />
+  <rect x="7" y="16" width="2" height="6" fill="#94A3B8" />
+  <rect x="31" y="16" width="2" height="6" fill="#94A3B8" />
+
+  <!-- Recessed faceplate & glowing visor -->
+  <rect x="12" y="13" width="16" height="13" fill="#090E1A" stroke="#060A14" stroke-width="1.5" />
+  <rect x="14" y="16" width="12" height="4" fill="#FDE047" />
+  <rect x="16" y="16" width="8" height="2" fill="#FEF9C3" />
+
+  <!-- Silver chin guard -->
+  <rect x="14" y="23" width="12" height="3" fill="#CBD5E1" />
+</svg>

@@ -51,7 +51,7 @@ export const SettingsHelpPopup: React.FC<SettingsHelpPopupProps> = ({ topic, onC
           {topic === 'jira-token' ? (
             <>
               <p className="text-slate-300">
-                For <strong>JIRA Cloud</strong>, NeuroForge authenticates with your Atlassian email
+                For <strong>JIRA Cloud</strong>, NeuroForge AI authenticates with your Atlassian email
                 and an API Token (stored locally in SQLite only).
               </p>
               <a
@@ -65,7 +65,7 @@ export const SettingsHelpPopup: React.FC<SettingsHelpPopupProps> = ({ topic, onC
               </a>
               <ol className="list-decimal list-inside space-y-1.5 text-slate-300">
                 <li>Sign in to your Atlassian account using the link above.</li>
-                <li>Click <strong>Create API token</strong> and give it a label (e.g. <code>NeuroForge</code>).</li>
+                <li>Click <strong>Create API token</strong> and give it a label (e.g. <code>NeuroForge AI</code>).</li>
                 <li>Click <strong>Create</strong>, then click <strong>Copy</strong> immediately.</li>
                 <li>Paste the token into the <strong>API Token</strong> field in System Settings.</li>
                 <li>

@@ -217,8 +217,8 @@ export const ArcadeHud: React.FC<ArcadeHudProps> = ({
         <button
           type="button"
           onClick={onOpenInfo}
-          aria-label="About NeuroForge and game guide"
-          title="About NeuroForge & Guide"
+          aria-label="About NeuroForge AI and game guide"
+          title="About NeuroForge AI & Guide"
           className="pointer-events-auto w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-[#0F172A]/95 hover:bg-slate-800 active:translate-y-0.5 border-2 border-slate-500 hover:border-cyan-400 text-cyan-300 cursor-pointer shadow-[0_2px_0_#020617]"
         >
           <Info className="w-4 h-4" />

@@ -10,7 +10,7 @@ interface InfoModalProps {
 
 export const InfoModal: React.FC<InfoModalProps> = ({ onClose }) => (
   <ArcadeModalShell
-    title="ABOUT NEUROFORGE"
+    title="ABOUT NEUROFORGE AI"
     subtitle="Self-hosted 16-bit Arcade JIRA RPG built for ADHD-friendly focus."
     accentColor="cyan"
     maxWidthClass="max-w-2xl"
@@ -46,9 +46,9 @@ export const InfoModal: React.FC<InfoModalProps> = ({ onClose }) => (
   >
     <div className="space-y-4 text-xs sm:text-sm text-slate-300 leading-relaxed">
       <section className="space-y-1.5">
-        <h3 className="font-pixel text-xs text-yellow-300">WHAT IS NEUROFORGE?</h3>
+        <h3 className="font-pixel text-xs text-yellow-300">WHAT IS NEUROFORGE AI?</h3>
         <p>
-          NeuroForge turns your real JIRA backlog into a single-focus 16-bit arcade room. Pin one
+          NeuroForge AI turns your real JIRA backlog into a single-focus 16-bit arcade room. Pin one
           active task as your <strong>Boss Robot</strong>, break overwhelming tickets into tiny
           micro-steps with local AI (Ollama), and earn zero-guilt RPG progression without leaving
           your local machine.
@@ -61,7 +61,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ onClose }) => (
           <li>
             <strong className="text-slate-100">Boss Combat &amp; Real JIRA Loop:</strong> Shooting
             the Boss the <strong>first time</strong> opens the pinned ticket directly in JIRA.
-            Complete the task in JIRA, then shoot the Boss again — NeuroForge checks the live JIRA
+            Complete the task in JIRA, then shoot the Boss again — NeuroForge AI checks the live JIRA
             status against your configured Completed Statuses. If it&apos;s done, the Boss explodes
             and awards real persisted XP! If not, the laser deflects off its shield.
           </li>
