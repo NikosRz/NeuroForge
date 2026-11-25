@@ -1,5 +1,5 @@
 {
-  "name": "NeuroForge AI",
+  "name": "NeuroForge AI (Beta)",
   "description": "Standalone 16-bit retro arcade platformer canvas scene with procedural pixel art and Web Audio API synthesized SFX.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

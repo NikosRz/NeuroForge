@@ -10,8 +10,8 @@ interface InfoModalProps {
 
 export const InfoModal: React.FC<InfoModalProps> = ({ onClose }) => (
   <ArcadeModalShell
-    title="ABOUT NEUROFORGE AI"
-    subtitle="Self-hosted 16-bit Arcade JIRA RPG built for ADHD-friendly focus."
+    title="ABOUT NEUROFORGE AI (BETA)"
+    subtitle="Version: Beta · Self-hosted 16-bit Arcade JIRA RPG built for ADHD-friendly focus."
     accentColor="cyan"
     maxWidthClass="max-w-2xl"
     onClose={onClose}

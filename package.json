@@ -1,12 +1,12 @@
 {
   "name": "neuroforge",
   "private": true,
-  "version": "2.0.0",
+  "version": "2.0.0-beta",
   "type": "module",
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "next dev -p 3210",
     "build": "next build",
-    "start": "next start -p 3000",
+    "start": "next start -p 3210",
     "clean": "rm -rf .next dist",
     "lint": "tsc --noEmit"
   },

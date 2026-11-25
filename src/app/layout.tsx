@@ -36,7 +36,7 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'NeuroForge AI',
+  title: 'NeuroForge AI (Beta)',
   description: 'Self-hosted ADHD-friendly 16-bit arcade RPG wrapper for JIRA with local Ollama AI.',
 };
 

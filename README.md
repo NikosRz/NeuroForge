@@ -1,6 +1,6 @@
-# NeuroForge
+# NeuroForge AI (Beta)
 
-> **A self-hosted, single-screen 16-bit retro arcade RPG wrapper for JIRA — built for ADHD brains.**
+> **Version:** Beta · **A self-hosted, single-screen 16-bit retro arcade RPG wrapper for JIRA — built for ADHD brains.**
 
 Instead of staring at an overwhelming corporate backlog, NeuroForge drops you into a compact, zero-scroll 16-bit cyber-commando stage. Your backlog lives inside physical room stations, and you face **one active Mecha Boss Enemy** representing your **Next Quest** — complete with laser/blaster combat, jumping `+XX XP` popups, Web Audio 8-bit synth SFX, local AI task splitting, and a zero-guilt stamina economy.
 
@@ -79,7 +79,7 @@ _(All stage hotkeys automatically lock whenever any modal is open; press `ESC` t
    ```
 
 4. **Open NeuroForge:**
-   Visit [http://localhost:3000](http://localhost:3000).  
+   Visit [http://localhost:3210](http://localhost:3210).  
    On first launch, you start in **Clean Base-Camp** mode — use **Mind-Dump (`M`)** right away, or click **`⚙` Settings** to connect JIRA, `.ics` calendars, and Ollama.
 
 ---

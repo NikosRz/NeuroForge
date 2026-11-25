@@ -176,9 +176,26 @@ button {
 }
 
 .brand-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-family: var(--font-pixel);
   font-size: 1rem;
   color: var(--text-primary);
+}
+
+.brand-beta {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-cyan);
+  background: rgba(34, 211, 238, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  border-radius: 999px;
+  padding: 2px 7px;
+  line-height: 1.2;
 }
 
 .brand-sub {
